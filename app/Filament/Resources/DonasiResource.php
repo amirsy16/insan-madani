@@ -1,0 +1,485 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\DonasiResource\Pages;
+use App\Models\Donasi;
+use App\Models\JenisDonasi;
+use App\Models\Donatur; // Pastikan model Donatur diimpor jika digunakan di URL
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Get;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Builder;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use Carbon\Carbon;
+
+class DonasiResource extends Resource
+{
+    protected static ?string $model = Donasi::class;
+    
+    // Konfigurasi navigasi
+    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+    protected static ?string $navigationLabel = 'Donasi';
+    protected static ?string $modelLabel = 'Donasi';
+    protected static ?string $pluralModelLabel = 'Donasi';
+    protected static ?int $navigationSort = 2;
+
+    /**
+     * Definisi form untuk halaman create dan edit donasi
+     */
+    public static function form(Form $form): Form 
+    {
+        return $form->schema([
+            // Bagian 1: Informasi Donatur dan Jenis Donasi
+            Forms\Components\Section::make('Informasi Donatur')
+                ->description('Data donatur dan jenis donasi')
+                ->icon('heroicon-o-user')
+                ->columns(2)
+                ->schema([
+                    Select::make('donatur_id')
+                        ->relationship('donatur', 'nama')
+                        ->searchable()
+                        ->preload()
+                        ->required()
+                        ->createOptionForm([
+                            Forms\Components\TextInput::make('nama')
+                                ->required()
+                                ->maxLength(255)
+                                ->label('Nama Donatur'),
+                            Forms\Components\Textarea::make('alamat')
+                                ->columnSpanFull()
+                                ->label('Alamat'),
+                            Forms\Components\TextInput::make('nomor_hp')
+                                ->tel()
+                                ->maxLength(20)
+                                ->label('Nomor HP'),
+                            Forms\Components\TextInput::make('email')
+                                ->email()
+                                ->maxLength(255)
+                                ->label('Email'),
+                            Forms\Components\TextInput::make('pekerjaan')
+                                ->maxLength(255)
+                                ->label('Pekerjaan'),
+                        ])
+                        ->label('Donatur'),
+                    
+                    Toggle::make('atas_nama_hamba_allah')
+                        ->label('Sembunyikan Nama Donatur')
+                        ->helperText('Donasi akan tercatat sebagai "Hamba Allah"'),
+                    
+                    Select::make('jenis_donasi_id')
+                        ->relationship('jenisDonasi', 'nama', function ($query) {
+                            return $query->where('aktif', true);
+                        })
+                        ->searchable()
+                        ->preload()
+                        ->required()
+                        ->label('Jenis Donasi')
+                        ->reactive()
+                        ->afterStateUpdated(function (callable $set) {
+                            $set('keterangan_infak_khusus', null);
+                            $set('deskripsi_barang', null);
+                            $set('perkiraan_nilai_barang', null);
+                        }),
+                    
+                    DatePicker::make('tanggal_donasi')
+                        ->default(now())
+                        ->required()
+                        ->label('Tanggal Donasi')
+                        ->maxDate(now())
+                        ->displayFormat('d M Y'),
+                ]),
+            
+            // Bagian 2: Detail Donasi (Jumlah/Barang)
+            Forms\Components\Section::make('Detail Donasi')
+                ->description('Informasi jumlah dan jenis donasi')
+                ->icon('heroicon-o-currency-dollar')
+                ->columns(2)
+                ->schema([
+                    TextInput::make('jumlah')
+                        ->label('Jumlah Donasi (Uang)')
+                        ->helperText('Masukkan jumlah donasi dalam Rupiah')
+                        ->prefix('Rp')
+                        ->numeric()
+                        ->requiredUnless('jenis_donasi_id', function (Get $get) {
+                            $jenisDonasiId = $get('jenis_donasi_id');
+                            if (!$jenisDonasiId) return true; // Jika jenis donasi belum dipilih, anggap wajib
+                            $jenisDonasi = JenisDonasi::find($jenisDonasiId);
+                            return $jenisDonasi && $jenisDonasi->apakah_barang; // Tidak wajib jika barang
+                        })
+                        ->dehydrateStateUsing(fn ($state) => 
+                            $state ? (float) str_replace(['.', ','], ['', '.'], $state) : null
+                        )
+                        ->formatStateUsing(fn ($state) => 
+                            $state ? number_format($state, 0, ',', '.') : null
+                        )
+                        // Kondisi visible agar tidak muncul jika donasi barang
+                        ->visible(function (Get $get) {
+                            $jenisDonasiId = $get('jenis_donasi_id');
+                            if (!$jenisDonasiId) return true; // Tampil jika jenis belum dipilih
+                            $jenisDonasi = JenisDonasi::find($jenisDonasiId);
+                            return !$jenisDonasi || !$jenisDonasi->apakah_barang; // Tampil jika bukan barang
+                        }),
+                    
+                    Textarea::make('keterangan_infak_khusus')
+                        ->label('Keterangan Infak Khusus/DSKL')
+                        ->placeholder('Contoh: Untuk pembangunan masjid, beasiswa, dll')
+                        ->visible(function (Get $get) {
+                            $jenisDonasiId = $get('jenis_donasi_id');
+                            if (!$jenisDonasiId) return false;
+                            $jenisDonasi = JenisDonasi::find($jenisDonasiId);
+                            return $jenisDonasi && $jenisDonasi->membutuhkan_keterangan_tambahan && !$jenisDonasi->apakah_barang;
+                        })
+                        ->columnSpanFull(),
+                    
+                    Textarea::make('deskripsi_barang')
+                        ->label('Deskripsi Barang')
+                        ->placeholder('Contoh: Beras 5kg kualitas premium, Pakaian layak pakai 10 pcs, dll')
+                        ->visible(function (Get $get) {
+                            $jenisDonasiId = $get('jenis_donasi_id');
+                            if (!$jenisDonasiId) return false;
+                            $jenisDonasi = JenisDonasi::find($jenisDonasiId);
+                            return $jenisDonasi && $jenisDonasi->apakah_barang;
+                        })
+                        ->columnSpanFull(),
+                    
+                    TextInput::make('perkiraan_nilai_barang')
+                        ->label('Perkiraan Nilai Barang')
+                        ->helperText('Estimasi nilai barang dalam Rupiah')
+                        ->prefix('Rp')
+                        ->numeric()
+                        // ->mask('999.999.999.999') // Mask bisa menyebabkan masalah dengan dehydrate/format, hati-hati
+                        ->visible(function (Get $get) {
+                            $jenisDonasiId = $get('jenis_donasi_id');
+                            if (!$jenisDonasiId) return false;
+                            $jenisDonasi = JenisDonasi::find($jenisDonasiId);
+                            return $jenisDonasi && $jenisDonasi->apakah_barang;
+                        })
+                        ->dehydrateStateUsing(fn ($state) => 
+                            $state ? (float) str_replace(['.', ','], ['', '.'], $state) : null
+                        )
+                         ->formatStateUsing(fn ($state) =>  // Menggunakan formatStateUsing untuk tampilan
+                            $state ? number_format($state, 0, ',', '.') : null
+                        ),
+                ]),
+            
+            // Bagian 3: Metode Pembayaran dan Bukti
+            Forms\Components\Section::make('Metode Pembayaran')
+                ->description('Informasi cara pembayaran dan bukti')
+                ->icon('heroicon-o-credit-card')
+                ->columns(2)
+                ->schema([
+                    Select::make('metode_pembayaran_id')
+                        ->relationship('metodePembayaran', 'nama', function ($query) {
+                            return $query->where('aktif', true);
+                        })
+                        ->searchable()
+                        ->preload()
+                        ->label('Metode Pembayaran'),
+                    
+                    Select::make('fundraiser_id')
+                        ->relationship('fundraiser', 'nama_fundraiser', function ($query) {
+                            return $query->where('aktif', true);
+                        })
+                        ->searchable()
+                        ->preload()
+                        ->label('Fundraiser')
+                        ->placeholder('Pilih jika donasi melalui fundraiser'),
+                    
+                    FileUpload::make('bukti_pembayaran')
+                        ->directory('bukti-pembayaran')
+                        ->image()
+                        ->imageResizeMode('cover')
+                        // ->imageCropAspectRatio('1:1') // Bisa diaktifkan jika perlu crop
+                        ->imageResizeTargetWidth('500')
+                        // ->imageResizeTargetHeight('500') // Biasanya width saja cukup, height akan menyesuaikan aspek rasio
+                        ->label('Bukti Pembayaran')
+                        ->helperText('Upload foto bukti transfer/pembayaran (opsional)')
+                        ->columnSpanFull(),
+                    
+                    Textarea::make('catatan_donatur')
+                        ->label('Catatan dari Donatur')
+                        ->placeholder('Catatan atau pesan dari donatur (opsional)')
+                        ->columnSpanFull(),
+                ]),
+            
+            // Bagian 4: Status Konfirmasi (collapsible)
+            Forms\Components\Section::make('Status Konfirmasi')
+                ->description('Informasi verifikasi donasi')
+                ->icon('heroicon-o-check-badge')
+                ->schema([
+                    Select::make('status_konfirmasi')
+                        ->options([
+                            'pending' => 'Pending',
+                            'verified' => 'Terverifikasi',
+                            'rejected' => 'Ditolak',
+                        ])
+                        ->default('pending')
+                        ->required()
+                        ->reactive()
+                        ->afterStateUpdated(function (callable $set, $state) {
+                            if ($state !== 'pending') {
+                                $set('dikofirmasi_oleh_user_id', auth()->id());
+                                $set('dikonfirmasi_pada', now());
+                            } else {
+                                $set('dikofirmasi_oleh_user_id', null);
+                                $set('dikonfirmasi_pada', null);
+                            }
+                        }),
+                    
+                    Textarea::make('catatan_konfirmasi')
+                        ->label('Catatan Konfirmasi Admin')
+                        ->placeholder('Catatan internal terkait verifikasi donasi')
+                        ->columnSpanFull(),
+                    
+                    Forms\Components\Hidden::make('dikofirmasi_oleh_user_id')
+                        ->dehydrated(),
+                    
+                    Forms\Components\Hidden::make('dikonfirmasi_pada')
+                        ->dehydrated(),
+                    
+                    Placeholder::make('info_konfirmasi')
+                        ->label('Informasi Konfirmasi')
+                        ->content(function (?Donasi $record): ?string { // Type hint $record
+                            if (!$record || !$record->dikonfirmasi_pada) {
+                                return 'Donasi belum dikonfirmasi.';
+                            }
+                            
+                            $konfirmasiOleh = $record->dikonfirmasiOleh?->name ?? 'Sistem';
+                            $tanggal = Carbon::parse($record->dikonfirmasi_pada)->translatedFormat('d M Y H:i');
+                            $status = match($record->status_konfirmasi) {
+                                'verified' => 'Terverifikasi',
+                                'rejected' => 'Ditolak',
+                                default => ucfirst($record->status_konfirmasi)
+                            };
+                            
+                            return "Status: {$status}<br>Dikonfirmasi oleh: {$konfirmasiOleh}<br>Pada: {$tanggal}";
+                        })
+                        ->hiddenOn('create'),
+                ])
+                ->collapsible(),
+            
+            // Bagian 5: Informasi Pencatatan (read-only)
+            Placeholder::make('info_pencatatan') // Mengganti key agar unik dari field lain
+                ->label('Informasi Pencatatan')
+                ->content(function (?Donasi $record): string { // Type hint $record
+                    $currentUser = auth()->user();
+                    if (!$record || $record->wasRecentlyCreated || !$record->dicatatOleh) { // Cek jika record baru atau belum ada pencatat
+                        return 'Akan dicatat oleh: ' . ($currentUser?->name ?? 'Sistem');
+                    }
+                    
+                    $dicatatOleh = $record->dicatatOleh?->name ?? 'Sistem';
+                    $tanggal = $record->created_at?->translatedFormat('d M Y H:i') ?? '-';
+                    
+                    return "Dicatat oleh: {$dicatatOleh}<br>Pada: {$tanggal}";
+                })
+                ->hiddenOn('edit'), // Tampil saat create dan view, sembunyi saat edit
+            
+            // Hidden fields for system tracking
+            TextInput::make('nomor_transaksi_unik') // Dibuat visible untuk debug, bisa di-hidden lagi
+                ->default(fn () => 'TRX' . strtoupper(uniqid()))
+                ->dehydrated()
+                ->required()
+                ->unique(Donasi::class, 'nomor_transaksi_unik', ignoreRecord: true)
+                ->readOnlyOn('edit'), // Hanya bisa diisi saat create
+            
+            Forms\Components\Hidden::make('dicatat_oleh_user_id')
+                ->default(fn () => auth()->id())
+                ->dehydrated(),
+        ]);
+    }
+
+    /**
+     * Definisi tabel untuk halaman list donasi
+     */
+    public static function table(Table $table): Table 
+    {
+        return $table->columns([
+            TextColumn::make('nomor_transaksi_unik')
+                ->label('No. Transaksi')
+                ->searchable()
+                ->sortable()
+                ->copyable(),
+                
+            TextColumn::make('donatur.nama')
+                ->label('Donatur')
+                ->searchable()
+                ->sortable()
+                ->formatStateUsing(fn ($state, Donasi $record) => $record->atas_nama_hamba_allah ? 'Hamba Allah' : $state)
+                ->url(fn (Donasi $record) => $record->donatur && !$record->atas_nama_hamba_allah ? 
+                    DonaturResource::getUrl('view', ['record' => $record->donatur_id]) : null),
+                
+            TextColumn::make('jenisDonasi.nama')
+                ->label('Jenis Donasi')
+                ->searchable()
+                ->sortable(),
+                
+            TextColumn::make('jumlah')
+                ->money('IDR')
+                ->sortable()
+                ->formatStateUsing(fn ($state, Donasi $record) => 
+                    $record->jenisDonasi?->apakah_barang ? 
+                    '-' : 'Rp ' . number_format($state, 0, ',', '.')),
+                
+            TextColumn::make('tanggal_donasi')
+                ->date('d M Y')
+                ->sortable()
+                ->label('Tgl Donasi'),
+                
+            TextColumn::make('status_konfirmasi')
+                ->badge()
+                ->searchable()
+                ->sortable()
+                ->color(fn (string $state): string => match ($state) {
+                    'pending' => 'warning',
+                    'verified' => 'success',
+                    'rejected' => 'danger',
+                    default => 'gray',
+                })
+                ->formatStateUsing(fn (string $state): string => match ($state) {
+                    'pending' => 'Pending',
+                    'verified' => 'Terverifikasi',
+                    'rejected' => 'Ditolak',
+                    default => ucfirst($state),
+                }),
+                
+            TextColumn::make('perkiraan_nilai_barang')
+                ->money('IDR')
+                ->sortable()
+                ->label('Nilai Barang')
+                ->formatStateUsing(fn ($state, Donasi $record) => 
+                    $record->jenisDonasi?->apakah_barang ? 
+                    ('Rp ' . number_format($state ?? 0, 0, ',', '.')) : '-')
+                ->toggleable(isToggledHiddenByDefault: true),
+                
+            TextColumn::make('metodePembayaran.nama')
+                ->label('Metode Bayar')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+                
+            IconColumn::make('atas_nama_hamba_allah')
+                ->boolean()
+                ->label('Anonim')
+                ->toggleable(isToggledHiddenByDefault: true),
+                
+            TextColumn::make('fundraiser.nama_fundraiser')
+                ->label('Fundraiser')
+                ->toggleable(isToggledHiddenByDefault: true),
+                
+            TextColumn::make('dicatatOleh.name') // Intelephense mungkin masih error di sini, tapi runtime harusnya OK
+                ->label('Dicatat Oleh')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+                
+            TextColumn::make('created_at')
+                ->dateTime('d M Y H:i')
+                ->label('Tgl Input')
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ])->filters([
+            Tables\Filters\Filter::make('tanggal_donasi')
+                ->form([
+                    Forms\Components\DatePicker::make('dari_tanggal')
+                        ->label('Dari Tanggal'),
+                    Forms\Components\DatePicker::make('sampai_tanggal')
+                        ->label('Sampai Tanggal'),
+                ])
+                ->query(function (Builder $query, array $data): Builder {
+                    return $query
+                        ->when(
+                            $data['dari_tanggal'],
+                            fn (Builder $query, $date): Builder => $query->whereDate('tanggal_donasi', '>=', $date),
+                        )
+                        ->when(
+                            $data['sampai_tanggal'],
+                            fn (Builder $query, $date): Builder => $query->whereDate('tanggal_donasi', '<=', $date),
+                        );
+                })
+                ->indicateUsing(function (array $data): array {
+                    $indicators = [];
+                    if ($data['dari_tanggal'] ?? null) {
+                        $indicators['dari_tanggal'] = 'Dari ' . Carbon::parse($data['dari_tanggal'])->translatedFormat('d M Y');
+                    }
+                    if ($data['sampai_tanggal'] ?? null) {
+                        $indicators['sampai_tanggal'] = 'Sampai ' . Carbon::parse($data['sampai_tanggal'])->translatedFormat('d M Y');
+                    }
+                    return $indicators;
+                }),
+                
+            SelectFilter::make('jenis_donasi_id')
+                ->label('Jenis Donasi')
+                ->relationship('jenisDonasi', 'nama')
+                ->preload(),
+                
+            SelectFilter::make('metode_pembayaran_id')
+                ->label('Metode Pembayaran')
+                ->relationship('metodePembayaran', 'nama')
+                ->preload(),
+                
+            SelectFilter::make('status_konfirmasi')
+                ->label('Status Konfirmasi')
+                ->options([
+                    'pending' => 'Pending', 
+                    'verified' => 'Terverifikasi', 
+                    'rejected' => 'Ditolak',    ]),
+            
+            SelectFilter::make('fundraiser_id')
+                    ->relationship('fundraiser', 'nama_fundraiser')
+                    ->searchable()
+                    ->preload()
+                    ->label('Fundraiser'),
+            
+            Tables\Filters\TernaryFilter::make('atas_nama_hamba_allah')
+                ->label('Donasi Anonim')
+                ->placeholder('Semua donasi')
+                ->trueLabel('Hanya donasi anonim')
+                ->falseLabel('Hanya donasi tidak anonim')
+        ])->actions([
+            Tables\Actions\ViewAction::make(),
+            Tables\Actions\EditAction::make(),
+            Tables\Actions\DeleteAction::make(),
+        ])->bulkActions([
+            Tables\Actions\BulkActionGroup::make([
+                Tables\Actions\DeleteBulkAction::make(),
+                ExportBulkAction::make() // Dari pxlrbt/filament-excel
+            ]),
+        ])->defaultSort('tanggal_donasi', 'desc')
+        ->filtersFormColumns(3);
+    }
+
+    /**
+     * Definisi relasi yang tersedia untuk resource ini
+     */
+    public static function getRelations(): array
+    {
+        return [
+            // Relation managers jika ada
+        ];
+    }
+
+    /**
+     * Definisi halaman yang tersedia untuk resource ini
+     */
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListDonasis::route('/'),
+            'create' => Pages\CreateDonasi::route('/create'),
+            'view' => Pages\ViewDonasi::route('/{record}'),
+            'edit' => Pages\EditDonasi::route('/{record}/edit'),
+        ];
+    }
+}

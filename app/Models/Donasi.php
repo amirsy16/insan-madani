@@ -1,0 +1,29 @@
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Donasi extends Model {
+    use HasFactory;
+    protected $fillable = [
+        'donatur_id', 'jenis_donasi_id', 'metode_pembayaran_id', 'fundraiser_id',
+        'jumlah', 'keterangan_infak_khusus', 'deskripsi_barang', 'perkiraan_nilai_barang',
+        'bukti_pembayaran', 'catatan_donatur', 'tanggal_donasi', 'atas_nama_hamba_allah', 'nomor_transaksi_unik',
+        'status_konfirmasi', 'dikofirmasi_oleh_user_id', 'dikonfirmasi_pada', 'catatan_konfirmasi',
+        'dicatat_oleh_user_id',
+    ];
+    protected $casts = [
+        'jumlah' => 'decimal:2',
+        'perkiraan_nilai_barang' => 'decimal:2',
+        'tanggal_donasi' => 'date',
+        'atas_nama_hamba_allah' => 'boolean',
+        'dikonfirmasi_pada' => 'datetime',
+    ];
+    public function donatur(): BelongsTo { return $this->belongsTo(Donatur::class, 'donatur_id'); }
+    public function jenisDonasi(): BelongsTo { return $this->belongsTo(JenisDonasi::class, 'jenis_donasi_id'); }
+    public function metodePembayaran(): BelongsTo { return $this->belongsTo(MetodePembayaran::class, 'metode_pembayaran_id'); }
+    public function fundraiser(): BelongsTo { return $this->belongsTo(Fundraiser::class, 'fundraiser_id'); }
+    public function dikonfirmasiOleh(): BelongsTo { return $this->belongsTo(User::class, 'dikofirmasi_oleh_user_id'); }
+    public function dicatatOleh(): BelongsTo { return $this->belongsTo(User::class, 'dicatat_oleh_user_id'); }
+}
