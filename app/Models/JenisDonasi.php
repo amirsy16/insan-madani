@@ -1,21 +1,35 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class JenisDonasi extends Model {
+class JenisDonasi extends Model
+{
     use HasFactory;
+
     protected $fillable = [
-        'nama', 'kode', 'deskripsi',
-        'membutuhkan_keterangan_tambahan', 'apakah_barang', 'aktif'
+        'nama',
+        'apakah_barang',
+        'membutuhkan_keterangan_tambahan',
+        'sumber_dana_penyaluran_id',
+        'aktif',
     ];
+
     protected $casts = [
-        'membutuhkan_keterangan_tambahan' => 'boolean',
         'apakah_barang' => 'boolean',
+        'membutuhkan_keterangan_tambahan' => 'boolean',
         'aktif' => 'boolean',
     ];
-    public function donasis(): HasMany {
+
+    public function sumberDanaPenyaluran()
+    {
+        return $this->belongsTo(SumberDanaPenyaluran::class, 'sumber_dana_penyaluran_id');
+    }
+
+    public function donasis()
+    {
         return $this->hasMany(Donasi::class, 'jenis_donasi_id');
     }
 }

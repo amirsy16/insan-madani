@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             IndonesiaSeeder::class, // Import Indonesia regions first
             PekerjaanSeeder::class, // Then occupations
+            SumberDanaPenyaluranSeeder::class, // Tambahkan ini sebelum JenisDonasiSeeder
             JenisDonasiSeeder::class,
             MetodePembayaranSeeder::class,
             DonaturSeeder::class,
@@ -31,4 +32,6 @@ class DatabaseSeeder extends Seeder
         ]);
     }
 }
+
+
 

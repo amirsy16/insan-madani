@@ -13,7 +13,7 @@ class MetodePembayaranSeeder extends Seeder
      */
     public function run(): void
     {
-        MetodePembayaran::truncate();
+        // MetodePembayaran::truncate();
         $metodePembayaranData = [
             ['nama' => 'QRIS (Umum)', 'kode' => 'QRIS', 'tipe' => 'digital'],
             ['nama' => 'LinkAja', 'kode' => 'LNK', 'tipe' => 'digital'],
