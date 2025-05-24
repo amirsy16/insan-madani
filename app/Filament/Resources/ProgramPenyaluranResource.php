@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProgramPenyaluranResource\Pages;
-use App\Filament\Resources\ProgramPenyaluranResource\RelationManagers;
 use App\Models\ProgramPenyaluran;
 use App\Models\Asnaf;
 use App\Models\BidangProgram;
@@ -15,18 +14,16 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Illuminate\Support\Collection;
 use Illuminate\Support\HtmlString;
-use Illuminate\Support\Str;
-// Import yang ditambahkan/diperbaiki
-use Filament\Actions\Action;
 use Illuminate\Support\Facades\Auth;
-use App\Services\DanaService; // <-- TAMBAHKAN IMPORT INI
-use Filament\Forms\Components\Placeholder; 
+use App\Services\DanaService;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Grid;
+use Filament\Notifications\Notification;
 
 class ProgramPenyaluranResource extends Resource
 {
@@ -53,10 +50,6 @@ class ProgramPenyaluranResource extends Resource
                             Forms\Components\DatePicker::make('tanggal_penyaluran')
                                 ->required()
                                 ->default(now()),
-                            Forms\Components\TextInput::make('jumlah_dana')
-                                ->required()
-                                ->numeric()
-                                ->prefix('Rp'),
                             Forms\Components\Textarea::make('lokasi_penyaluran')
                                 ->required()
                                 ->columnSpanFull(),
@@ -64,17 +57,29 @@ class ProgramPenyaluranResource extends Resource
                                 ->columnSpanFull(),
                         ])->columns(2),
 
-                  Wizard\Step::make('Sumber & Alokasi Dana')
+                    Wizard\Step::make('Sumber & Alokasi Dana')
                         ->schema([
                             Forms\Components\Select::make('sumber_dana_penyaluran_id')
                                 ->relationship('sumberDanaPenyaluran', 'nama_sumber_dana')
                                 ->searchable()
                                 ->preload()
-                                ->live() // live() sangat penting untuk langkah ini
-                                ->afterStateUpdated(fn (Set $set) => $set('jumlah_dana', null)) // Reset jumlah dana jika sumber berubah
+                                ->live()
+                                ->afterStateUpdated(function (Set $set, Get $get, $state) {
+                                    // Reset jumlah dana jika sumber berubah
+                                    $set('jumlah_dana', null);
+                                    
+                                    // Cek apakah ini dana zakat, jika ya, tampilkan asnaf
+                                    $sumberDana = SumberDanaPenyaluran::find($state);
+                                    if ($sumberDana && strtolower($sumberDana->nama_sumber_dana) === 'dana zakat') {
+                                        $set('show_asnaf', true);
+                                    } else {
+                                        $set('show_asnaf', false);
+                                        $set('asnaf_id', null);
+                                    }
+                                })
                                 ->required(),
                             
-                            // Menampilkan Saldo Tersedia (Placeholder)
+                            // Menampilkan Saldo Tersedia
                             Placeholder::make('saldo_tersedia')
                                 ->label('Saldo Tersedia')
                                 ->content(function (Get $get, DanaService $danaService): string {
@@ -84,24 +89,17 @@ class ProgramPenyaluranResource extends Resource
                                     }
                                     $saldo = $danaService->getSaldoTersedia($sumberDanaId);
                                     return 'Rp ' . number_format($saldo, 0, ',', '.');
-                                })->columnSpanFull(),
-
-                            // ... (Select untuk Asnaf dan Bidang Program yang sudah ada)
-                            
-                        ]),
-
-                  Wizard\Step::make('Detail Penyaluran') // Mengganti nama langkah agar lebih sesuai
-                        ->schema([
-                             Forms\Components\TextInput::make('jumlah_dana')
+                                }),
+                                
+                            Forms\Components\TextInput::make('jumlah_dana')
                                 ->required()
                                 ->numeric()
                                 ->prefix('Rp')
-                                ->live(onBlur: true) // Untuk memicu validasi saat user keluar dari field
+                                ->live(onBlur: true)
                                 ->rule(function (Get $get, DanaService $danaService) {
                                     return function (string $attribute, $value, \Closure $fail) use ($get, $danaService) {
                                         $sumberDanaId = $get('sumber_dana_penyaluran_id');
                                         if (!$sumberDanaId) {
-                                            // Seharusnya tidak terjadi karena field sumber dana required
                                             return;
                                         }
                                         $saldoTersedia = $danaService->getSaldoTersedia($sumberDanaId);
@@ -110,27 +108,101 @@ class ProgramPenyaluranResource extends Resource
                                         }
                                     };
                                 }),
+                                
+                            // Hidden field untuk menentukan apakah asnaf ditampilkan
+                            Forms\Components\Hidden::make('show_asnaf')
+                                ->default(false),
+                                
+                            // Asnaf (hanya untuk dana zakat)
+                            Forms\Components\Select::make('asnaf_id')
+                                ->label('Asnaf (Penerima Zakat)')
+                                ->relationship('asnaf', 'nama_asnaf')
+                                ->searchable()
+                                ->preload()
+                                ->required(fn (Get $get): bool => $get('show_asnaf') === true)
+                                ->visible(fn (Get $get): bool => $get('show_asnaf') === true)
+                                ->helperText('Pilih kategori asnaf penerima zakat'),
+                                
+                            // Bidang Program (untuk semua jenis dana)
+                            Forms\Components\Select::make('bidang_program_id')
+                                ->label('Bidang Program')
+                                ->relationship('bidangProgram', 'nama_bidang')
+                                ->searchable()
+                                ->preload()
+                                ->required()
+                                ->helperText('Pilih bidang program untuk penyaluran ini'),
+                                
+                            // Jenis Donasi Spesifik (opsional)
+                            Forms\Components\Select::make('jenis_donasi_id')
+                                ->label('Jenis Donasi Spesifik (Opsional)')
+                                ->relationship('jenisDonasi', 'nama', function (Builder $query, Get $get) {
+                                    $sumberDanaId = $get('sumber_dana_penyaluran_id');
+                                    if ($sumberDanaId) {
+                                        $query->where('sumber_dana_penyaluran_id', $sumberDanaId);
+                                    }
+                                })
+                                ->searchable()
+                                ->preload()
+                                ->helperText('Opsional: Pilih jenis donasi spesifik jika penyaluran ini menggunakan dana dari jenis donasi tertentu'),
+                        ]),
 
-                            // ... (sisa field dari langkah 3 sebelumnya: penerima manfaat, bukti, dll.)
+                    Wizard\Step::make('Detail Penerima')
+                        ->schema([
+                            Forms\Components\Radio::make('tipe_penerima')
+                                ->label('Tipe Penerima Manfaat')
+                                ->options([
+                                    'individu' => 'Individu',
+                                    'lembaga' => 'Lembaga/Kelompok',
+                                ])
+                                ->default('individu')
+                                ->live()
+                                ->required(),
+                                
                             Forms\Components\TextInput::make('penerima_manfaat_individu')
-                                ->maxLength(255),
+                                ->label('Nama Penerima (Individu)')
+                                ->maxLength(255)
+                                ->required(fn (Get $get): bool => $get('tipe_penerima') === 'individu')
+                                ->visible(fn (Get $get): bool => $get('tipe_penerima') === 'individu'),
+                                
                             Forms\Components\TextInput::make('penerima_manfaat_lembaga')
-                                ->maxLength(255),
+                                ->label('Nama Lembaga/Kelompok')
+                                ->maxLength(255)
+                                ->required(fn (Get $get): bool => $get('tipe_penerima') === 'lembaga')
+                                ->visible(fn (Get $get): bool => $get('tipe_penerima') === 'lembaga'),
+                                
                             Forms\Components\TextInput::make('jumlah_penerima_manfaat')
+                                ->label('Jumlah Penerima Manfaat')
                                 ->numeric()
-                                ->default(1),
+                                ->default(1)
+                                ->helperText('Jumlah orang/KK yang menerima manfaat'),
+                                
                             Forms\Components\FileUpload::make('bukti_penyaluran')
+                                ->label('Bukti Penyaluran')
                                 ->directory('bukti-penyaluran')
                                 ->image()
-                                ->imageEditor(),
+                                ->imageEditor()
+                                ->columnSpanFull(),
                         ])->columns(2),
-
-                ])->columnSpanFull()
-                  // ... (nextAction dan previousAction yang sudah ada)
-                  ,
+                ])
+                ->columnSpanFull()
+                ->nextAction(
+                    fn (Forms\Components\Actions\Action $action) => $action->label('Lanjut')
+                )
+                ->previousAction(
+                    fn (Forms\Components\Actions\Action $action) => $action->label('Kembali')
+                ),
 
                 Forms\Components\Hidden::make('dicatat_oleh_id')
                     ->default(Auth::id()),
+                    
+                Forms\Components\Hidden::make('kode_program_penyaluran')
+                    ->default(function () {
+                        $prefix = 'PYL';
+                        $date = now()->format('Ymd');
+                        $lastRecord = ProgramPenyaluran::latest('id')->first();
+                        $lastId = $lastRecord ? $lastRecord->id + 1 : 1;
+                        return $prefix . $date . str_pad($lastId, 4, '0', STR_PAD_LEFT);
+                    }),
             ]);
     }
 
@@ -138,10 +210,15 @@ class ProgramPenyaluranResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('kode_program_penyaluran')
+                    ->label('Kode')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('nama_program')
                     ->label('Nama Program')
                     ->searchable()
-                    ->wrap(),
+                    ->wrap()
+                    ->limit(30),
                 Tables\Columns\TextColumn::make('tanggal_penyaluran')
                     ->date('d M Y')
                     ->sortable(),
@@ -151,22 +228,30 @@ class ProgramPenyaluranResource extends Resource
                 Tables\Columns\TextColumn::make('sumberDanaPenyaluran.nama_sumber_dana')
                     ->label('Sumber Dana')
                     ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Dana Zakat' => 'success',
+                        'Dana Infak/Sedekah' => 'warning',
+                        'Dana DSKL' => 'info',
+                        default => 'gray',
+                    })
                     ->searchable(),
-                Tables\Columns\TextColumn::make('alokasi')
-                    ->label('Alokasi')
-                    ->html()
-                    ->getStateUsing(function (ProgramPenyaluran $record) {
-                        if ($record->asnaf) {
-                            return '<strong>Asnaf:</strong> ' . $record->asnaf->nama_asnaf;
-                        }
-                        if ($record->bidangProgram) {
-                            return '<strong>Bidang:</strong> ' . $record->bidangProgram->nama_bidang;
-                        }
-                        return '-';
-                    }),
+                Tables\Columns\TextColumn::make('asnaf.nama_asnaf')
+                    ->label('Asnaf')
+                    ->badge()
+                    ->color('success')
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('bidangProgram.nama_bidang')
+                    ->label('Bidang Program')
+                    ->badge()
+                    ->color('info')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('penerimaManfaat')
                     ->label('Penerima Manfaat')
-                    ->getStateUsing(fn (ProgramPenyaluran $record) => $record->namaPenerimaManfaat),
+                    ->getStateUsing(fn (ProgramPenyaluran $record) => $record->getNamaPenerimaManfaatAttribute())
+                    ->searchable(['penerima_manfaat_individu', 'penerima_manfaat_lembaga']),
+                Tables\Columns\TextColumn::make('jumlah_penerima_manfaat')
+                    ->label('Jumlah Penerima')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('dicatatOleh.name')
                     ->label('Dicatat Oleh')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -194,23 +279,24 @@ class ProgramPenyaluranResource extends Resource
                         return $query
                             ->when(
                                 $data['dari_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_penyaluran', '>=', $date)
+                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_penyaluran', '>=', $date),
                             )
                             ->when(
                                 $data['sampai_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_penyaluran', '<=', $date)
+                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_penyaluran', '<=', $date),
                             );
                     }),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->defaultSort('tanggal_penyaluran', 'desc');
     }
 
     public static function getRelations(): array
@@ -225,10 +311,11 @@ class ProgramPenyaluranResource extends Resource
         return [
             'index' => Pages\ListProgramPenyalurans::route('/'),
             'create' => Pages\CreateProgramPenyaluran::route('/create'),
-            'view' => Pages\ViewProgramPenyaluran::route('/{record}'),
             'edit' => Pages\EditProgramPenyaluran::route('/{record}/edit'),
+            'view' => Pages\ViewProgramPenyaluran::route('/{record}'),
         ];
     }
 }
+
 
 

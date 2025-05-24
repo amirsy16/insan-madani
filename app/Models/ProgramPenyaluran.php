@@ -64,4 +64,6 @@ class ProgramPenyaluran extends Model
     {
         return $this->penerima_manfaat_individu ?: $this->penerima_manfaat_lembaga ?: 'N/A';
     }
+
+
 }
