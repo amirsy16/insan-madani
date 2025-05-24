@@ -5,74 +5,72 @@ namespace App\Services;
 use App\Models\Donasi;
 use App\Models\ProgramPenyaluran;
 use App\Models\SumberDanaPenyaluran;
-use Illuminate\Support\Facades\DB;
 
 class DanaService
 {
-    /**
-     * Menghitung saldo tersedia untuk suatu Sumber Dana Penyaluran.
-     *
-     * @param int $sumberDanaPenyaluranId
-     * @return float
-     */
-    public function getSaldoTersedia(int $sumberDanaPenyaluranId): float
+    public function getLaporanPerubahanDana($startDate, $endDate, $sumberDanaId = null)
     {
-        $sumberDana = SumberDanaPenyaluran::find($sumberDanaPenyaluranId);
-        if (!$sumberDana) {
-            return 0;
+        $sumberDanaPenyaluran = SumberDanaPenyaluran::query()
+            ->when($sumberDanaId, fn ($query, $id) => $query->where('id', $id))
+            ->get();
+
+        $report = [];
+
+        foreach ($sumberDanaPenyaluran as $sumberDana) {
+            $saldoAwal = $this->getSaldoAwal($startDate, $sumberDana->id);
+            $totalPemasukan = $this->getTotalPemasukan($startDate, $endDate, $sumberDana->id);
+            $totalPengeluaran = $this->getTotalPengeluaran($startDate, $endDate, $sumberDana->id);
+            $saldoAkhir = $saldoAwal + $totalPemasukan - $totalPengeluaran;
+
+            $report[] = [
+                'sumber_dana' => $sumberDana->nama_sumber_dana,
+                'saldo_awal' => $saldoAwal,
+                'total_pemasukan' => $totalPemasukan,
+                'total_pengeluaran' => $totalPengeluaran,
+                'kenaikan_penurunan' => $totalPemasukan - $totalPengeluaran,
+                'saldo_akhir' => $saldoAkhir,
+            ];
         }
+        return $report;
+    }
 
-        // Log untuk debugging
-        \Illuminate\Support\Facades\Log::info('Menghitung saldo untuk: ' . $sumberDana->nama_sumber_dana);
 
-        // Tentukan pola pencarian berdasarkan nama sumber dana
-        $jenisDonasiLikePattern = '%'; // Default - ambil semua jenis donasi
-        
-        // Jika ingin spesifik berdasarkan nama sumber dana
-        if (str_contains(strtolower($sumberDana->nama_sumber_dana), 'zakat')) {
-            $jenisDonasiLikePattern = '%Zakat%';
-        } elseif (str_contains(strtolower($sumberDana->nama_sumber_dana), 'infaq')) {
-            $jenisDonasiLikePattern = '%Infaq%';
-        } elseif (str_contains(strtolower($sumberDana->nama_sumber_dana), 'csr')) {
-            $jenisDonasiLikePattern = '%CSR%';
-        }
+    public function getSaldoAwal($date, $sumberDanaId)
+    {
+        // Pemasukan sebelum $date
+        $pemasukanSebelum = Donasi::query()
+            ->join('jenis_donasis', 'donasis.jenis_donasi_id', '=', 'jenis_donasis.id')
+            ->where('jenis_donasis.sumber_dana_id', $sumberDanaId)
+            ->where('donasis.tanggal_donasi', '<', $date)
+            // MODIFIED: Now includes both 'terverifikasi' and 'pending' statuses.
+            ->whereIn('donasis.status_donasi', ['terverifikasi', 'pending'])
+            ->sum('donasis.jumlah_donasi');
 
-        // 1. Hitung total penerimaan dana - METODE ALTERNATIF
-        // Dapatkan semua jenis donasi yang terkait dengan sumber dana ini
-        $jenisDonasis = \App\Models\JenisDonasi::where('sumber_dana_penyaluran_id', $sumberDanaPenyaluranId)
-            ->pluck('id')
-            ->toArray();
-        
-        \Illuminate\Support\Facades\Log::info('Jenis Donasi IDs untuk ' . $sumberDana->nama_sumber_dana, $jenisDonasis);
-        
-        // Jika tidak ada jenis donasi yang terkait, coba gunakan pendekatan alternatif
-        if (empty($jenisDonasis)) {
-            \Illuminate\Support\Facades\Log::warning('Tidak ada jenis donasi yang terkait dengan ' . $sumberDana->nama_sumber_dana);
-            
-            // Coba cari berdasarkan nama jenis donasi
-            $totalPenerimaan = \App\Models\Donasi::where('status_konfirmasi', 'verified')
-                ->whereHas('jenisDonasi', function ($query) use ($jenisDonasiLikePattern) {
-                    $query->where('nama', 'like', $jenisDonasiLikePattern);
-                })
-                ->sum('jumlah');
-        } else {
-            // Gunakan jenis donasi yang terkait
-            $totalPenerimaan = \App\Models\Donasi::where('status_konfirmasi', 'verified')
-                ->whereIn('jenis_donasi_id', $jenisDonasis)
-                ->sum('jumlah');
-        }
-        
-        \Illuminate\Support\Facades\Log::info('Total Penerimaan untuk ' . $sumberDana->nama_sumber_dana . ': ' . $totalPenerimaan);
+        // Pengeluaran sebelum $date
+        $pengeluaranSebelum = ProgramPenyaluran::query()
+            ->where('sumber_dana_penyaluran_id', $sumberDanaId)
+            ->where('tanggal_penyaluran', '<', $date)
+            ->sum('jumlah_penyaluran');
 
-        // 2. Hitung total penyaluran dana
-        $totalPenyaluran = \App\Models\ProgramPenyaluran::where('sumber_dana_penyaluran_id', $sumberDanaPenyaluranId)
-            ->sum('jumlah_dana');
-        
-        \Illuminate\Support\Facades\Log::info('Total Penyaluran untuk ' . $sumberDana->nama_sumber_dana . ': ' . $totalPenyaluran);
-        
-        $saldo = $totalPenerimaan - $totalPenyaluran;
-        \Illuminate\Support\Facades\Log::info('Saldo Akhir untuk ' . $sumberDana->nama_sumber_dana . ': ' . $saldo);
+        return $pemasukanSebelum - $pengeluaranSebelum;
+    }
 
-        return $saldo > 0 ? $saldo : 0;
+    public function getTotalPemasukan($startDate, $endDate, $sumberDanaId)
+    {
+        return Donasi::query()
+            ->join('jenis_donasis', 'donasis.jenis_donasi_id', '=', 'jenis_donasis.id')
+            ->where('jenis_donasis.sumber_dana_id', $sumberDanaId)
+            ->whereBetween('donasis.tanggal_donasi', [$startDate, $endDate])
+            // MODIFIED: Now includes both 'terverifikasi' and 'pending' statuses.
+            ->whereIn('donasis.status_donasi', ['verified', 'pending'])
+            ->sum('donasis.jumlah_donasi');
+    }
+
+    public function getTotalPengeluaran($startDate, $endDate, $sumberDanaId)
+    {
+        return ProgramPenyaluran::query()
+            ->where('sumber_dana_penyaluran_id', $sumberDanaId)
+            ->whereBetween('tanggal_penyaluran', [$startDate, $endDate])
+            ->sum('jumlah_penyaluran');
     }
 }
