@@ -64,22 +64,17 @@
                                     <td class="px-2 py-1 text-right border-t border-gray-300"></td>
                                     <td class="px-2 py-1 text-right border-t border-gray-300">{{ number_format($data['penerimaan'], 0, ',', '.') }}</td>
                                 </tr>
-                                
-                                @if(isset($data['bagian_amil']) && $data['bagian_amil'] > 0)
+                                {{-- Tambahkan baris potongan hak amil 12% jika bukan hak amil --}}
+                                @if(isset($data['bagian_amil']) && $data['bagian_amil'] > 0 && strtolower($data['title']) !== 'hak amil')
                                     <tr>
-                                        <td class="px-2 py-1 pl-8">Bagian Amil</td>
-                                        <td class="px-2 py-1 text-right">({{ number_format($data['bagian_amil'], 0, ',', '.') }})</td>
-                                    </tr>
-                                    <tr>
-                                        <td class="px-2 py-1 text-right"></td>
-                                        <td class="px-2 py-1 text-right font-bold">{{ number_format($data['penerimaan'] - $data['bagian_amil'], 0, ',', '.') }}</td>
-                                    </tr>
-                                @else
-                                    <tr>
-                                        <td class="px-2 py-1 text-right"></td>
-                                        <td class="px-2 py-1 text-right font-bold">{{ number_format($data['penerimaan'], 0, ',', '.') }}</td>
+                                        <td class="px-2 py-1 pl-8 text-gray-500">Bagian Amil</td>
+                                        <td class="px-2 py-1 text-right text-gray-500">({{ number_format($data['bagian_amil'], 0, ',', '.') }})</td>
                                     </tr>
                                 @endif
+                                <tr>
+                                    <td class="px-2 py-1 text-right"></td>
+                                    <td class="px-2 py-1 text-right font-bold">{{ number_format(($data['penerimaan'] ?? 0) - ($data['bagian_amil'] ?? 0), 0, ',', '.') }}</td>
+                                </tr>
                             @else
                                 <tr>
                                     <td class="px-2 py-1 text-right"></td>
@@ -168,12 +163,14 @@
                 Tidak ada data untuk ditampilkan. Silakan sesuaikan filter Anda.
             </div>
         @endforelse
+
+        {{-- HAK AMIL SECTION DI BAWAH TABEL DONASI --}}
+        @include('filament.pages.laporan.hak-amil-section', [
+            'penerimaanHakAmilDetail' => $penerimaanHakAmilDetail,
+            'totalPenerimaanHakAmil' => $totalPenerimaanHakAmil,
+            'penggunaanHakAmilDetail' => $penggunaanHakAmilDetail,
+            'totalPenggunaanHakAmil' => $totalPenggunaanHakAmil,
+            'surplusDefisitHakAmil' => $surplusDefisitHakAmil,
+        ])
     </div>
 </x-filament-panels::page>
-
-
-
-
-
-
-

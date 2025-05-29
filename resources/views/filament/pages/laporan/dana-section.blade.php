@@ -1,73 +1,99 @@
 {{-- Baris Judul Seksi --}}
-<tr class="bg-gray-50">
-    <td class="level-1" colspan="2">A. {{ $title }}</td>
-</tr>
-
-{{-- 1. Penerimaan --}}
 <tr>
-    <td class="level-2">1. Penerimaan Dana</td>
-    <td class="amount">{{ format_rp($data['penerimaan']) }}</td>
+    <th scope="row" class="px-2 py-2 font-bold text-lg" colspan="2">
+        {{ $title }}
+    </th>
 </tr>
-@if (!empty($detail_penerimaan) && $detail_penerimaan)
+<tr>
+    <th scope="row" class="px-2 py-2 font-bold">
+        1. Penerimaan Dana
+    </th>
+    <td class="px-2 py-2 text-right"></td>
+</tr>
+@if(isset($data['rincian_penerimaan']) && count($data['rincian_penerimaan']) > 0)
+    @foreach($data['rincian_penerimaan'] as $jenis => $jumlah)
+        <tr>
+            <td class="px-2 py-1 pl-8">- {{ $jenis }}</td>
+            <td class="px-2 py-1 text-right">{{ number_format($jumlah, 0, ',', '.') }}</td>
+        </tr>
+    @endforeach
     <tr>
-        <td class="level-3">- Zakat Perorangan</td>
-        <td class="amount">{{ format_rp($data['penerimaan_detail']['perorangan'] ?? 0) }}</td>
+        <td class="px-2 py-1 text-right border-t border-gray-300"></td>
+        <td class="px-2 py-1 text-right border-t border-gray-300">{{ number_format($data['penerimaan'], 0, ',', '.') }}</td>
     </tr>
+    @if(isset($data['bagian_amil']) && $data['bagian_amil'] > 0 && strtolower($title) !== 'hak amil')
+        <tr>
+            <td class="px-2 py-1 pl-8 text-gray-500">Bagian Amil</td>
+            <td class="px-2 py-1 text-right text-gray-500">({{ number_format($data['bagian_amil'], 0, ',', '.') }})</td>
+        </tr>
+    @endif
     <tr>
-        <td class="level-3">- Zakat Badan</td>
-        <td class="amount">{{ format_rp($data['penerimaan_detail']['badan'] ?? 0) }}</td>
+        <td class="px-2 py-1 text-right"></td>
+        <td class="px-2 py-1 text-right font-bold">{{ number_format(($data['penerimaan'] ?? 0) - ($data['bagian_amil'] ?? 0), 0, ',', '.') }}</td>
     </tr>
+@else
     <tr>
-        <td class="level-3">- Zakat Fitrah</td>
-        <td class="amount">{{ format_rp($data['penerimaan_detail']['fitrah'] ?? 0) }}</td>
+        <td class="px-2 py-1 text-right"></td>
+        <td class="px-2 py-1 text-right font-bold">{{ number_format($data['penerimaan'], 0, ',', '.') }}</td>
     </tr>
 @endif
-
-{{-- Bagian Amil --}}
 <tr>
-    <td class="level-2">Bagian Amil</td>
-    <td class="amount">({{ format_rp($data['bagian_amil']) }})</td>
+    <th scope="row" class="px-2 py-2 font-bold">
+        2. Penyaluran Dana
+    </th>
+    <td class="px-2 py-2 text-right"></td>
 </tr>
-
-{{-- Penyaluran --}}
-<tr>
-    <td class="level-2">2. Penyaluran Dana</td>
-    <td class="amount">{{ format_rp($data['penyaluran_net']) }}</td>
-</tr>
-<tr>
-    <td class="level-3">2.1 Penyaluran Dana berdasarkan Asnaf</td>
-    <td class="amount"></td>
-</tr>
-@foreach ($asnafList as $asnaf)
-    @if ($asnaf !== 'Amil')
+@if(isset($data['rincian_penyaluran_asnaf']) && count($data['rincian_penyaluran_asnaf']) > 0)
     <tr>
-        <td class="level-4">- {{ $asnaf }}</td>
-        <td class="amount">{{ format_rp($data['penyaluran_by_asnaf'][$asnaf] ?? 0) }}</td>
+        <td class="px-2 py-1 pl-8 font-semibold">2.1 Penyaluran Dana berdasarkan Asnaf</td>
+        <td class="px-2 py-1 text-right"></td>
     </tr>
-    @endif
-@endforeach
-
-<tr>
-    <td class="level-3">2.2 Penyaluran Dana berdasarkan Bidang Program</td>
-    <td class="amount"></td>
-</tr>
-@foreach ($programList as $program)
+    @foreach($data['rincian_penyaluran_asnaf'] as $asnaf => $jumlah)
+        <tr>
+            <td class="px-2 py-1 pl-16">- {{ $asnaf }}</td>
+            <td class="px-2 py-1 text-right">{{ $jumlah > 0 ? number_format($jumlah, 0, ',', '.') : '-' }}</td>
+        </tr>
+    @endforeach
     <tr>
-        <td class="level-4">- {{ $program }}</td>
-        <td class="amount">{{ format_rp($data['penyaluran_by_program'][$program] ?? 0) }}</td>
+        <td class="px-2 py-1 text-right border-t border-gray-300"></td>
+        <td class="px-2 py-1 text-right border-t border-gray-300">{{ number_format($data['penyaluran'], 0, ',', '.') }}</td>
     </tr>
-@endforeach
-
-{{-- Surplus, Saldo Awal, Saldo Akhir --}}
-<tr class="font-semibold">
-    <td class="level-2">Surplus (defisit)</td>
-    <td class="amount">{{ format_rp($data['surplus_defisit']) }}</td>
+@endif
+@if(isset($data['rincian_penyaluran']) && count($data['rincian_penyaluran']) > 0)
+    <tr>
+        <td class="px-2 py-1 pl-8 font-semibold">2.{{ isset($data['rincian_penyaluran_asnaf']) ? '2' : '1' }} Penyaluran Dana berdasarkan Bidang Program</td>
+        <td class="px-2 py-1 text-right"></td>
+    </tr>
+    @foreach($data['rincian_penyaluran'] as $bidang => $jumlah)
+        <tr>
+            <td class="px-2 py-1 pl-16">- {{ $bidang }}</td>
+            <td class="px-2 py-1 text-right">{{ $jumlah > 0 ? number_format($jumlah, 0, ',', '.') : '-' }}</td>
+        </tr>
+    @endforeach
+    <tr>
+        <td class="px-2 py-1 text-right border-t border-gray-300"></td>
+        <td class="px-2 py-1 text-right border-t border-gray-300">{{ number_format($data['penyaluran'], 0, ',', '.') }}</td>
+    </tr>
+@endif
+<tr>
+    <td class="px-2 py-1 text-right"></td>
+    <td class="px-2 py-1 text-right font-bold">{{ number_format($data['penyaluran'], 0, ',', '.') }}</td>
 </tr>
 <tr>
-    <td class="level-2">Saldo Awal</td>
-    <td class="amount">{{ format_rp($data['saldo_awal']) }}</td>
+    <td class="px-2 py-2 font-semibold">Surplus (defisit)</td>
+    <td class="px-2 py-2 text-right font-semibold">
+        {{ $data['surplus_defisit'] < 0 ? '(' . number_format(abs($data['surplus_defisit']), 0, ',', '.') . ')' : number_format($data['surplus_defisit'], 0, ',', '.') }}
+    </td>
 </tr>
-<tr class="font-bold">
-    <td class="level-2">Saldo Akhir</td>
-    <td class="amount">{{ format_rp($data['saldo_akhir']) }}</td>
+<tr>
+    <td class="px-2 py-2 font-semibold">Saldo Awal</td>
+    <td class="px-2 py-2 text-right font-semibold">
+        {{ number_format($data['saldo_awal'], 0, ',', '.') }}
+    </td>
+</tr>
+<tr>
+    <td class="px-2 py-2 font-bold">Saldo Akhir</td>
+    <td class="px-2 py-2 text-right font-bold bg-yellow-100">
+        {{ number_format($data['saldo_akhir'], 0, ',', '.') }}
+    </td>
 </tr>

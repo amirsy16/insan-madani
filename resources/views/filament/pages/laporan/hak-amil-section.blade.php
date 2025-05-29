@@ -1,53 +1,46 @@
-<tr class="bg-gray-50">
-    <td class="level-1" colspan="2">F. {{ $title }}</td>
-</tr>
-
-{{-- Penerimaan Hak Amil --}}
-<tr>
-    <td class="level-2">1. Penerimaan Hak Amil</td>
-    <td class="amount">{{ format_rp($data['total_penerimaan']) }}</td>
-</tr>
-<tr>
-    <td class="level-3">- Penerimaan hak amil dari zakat</td>
-    <td class="amount">{{ format_rp($data['penerimaan_amil_zakat']) }}</td>
-</tr>
-<tr>
-    <td class="level-3">- Penerimaan hak amil dari Infaq</td>
-    <td class="amount">{{ format_rp($data['penerimaan_amil_infak']) }}</td>
-</tr>
-<tr>
-    <td class="level-3">- Penerimaan hak amil dari dana CSR</td>
-    <td class="amount">{{ format_rp($data['penerimaan_amil_csr']) }}</td>
-</tr>
-
-{{-- Penggunaan Hak Amil --}}
-<tr>
-    <td class="level-2">2. Penggunaan Hak Amil</td>
-    <td class="amount">{{ format_rp($data['total_penggunaan']) }}</td>
-</tr>
-@foreach ($data['penggunaan_detail'] as $item => $value)
-    <tr>
-        <td class="level-3">- {{ $item }}</td>
-        <td class="amount">{{ format_rp($value) }}</td>
-    </tr>
-@endforeach
-<tr class="border-t">
-    <td class="level-3 text-red-600" colspan="2">
-        <strong>Catatan:</strong> Data Penggunaan Hak Amil belum dapat ditampilkan karena tidak ada sumber data di database.
-    </td>
-</tr>
-
-
-{{-- Surplus & Saldo --}}
-<tr class="font-semibold">
-    <td class="level-2">Surplus (defisit) Hak Amil</td>
-    <td class="amount">{{ format_rp($data['surplus_defisit']) }}</td>
-</tr>
-<tr>
-    <td class="level-2">Saldo Awal Hak Amil</td>
-    <td class="amount">{{ format_rp($data['saldo_awal']) }}</td>
-</tr>
-<tr class="font-bold">
-    <td class="level-2">Saldo Akhir Hak Amil</td>
-    <td class="amount">{{ format_rp($data['saldo_akhir']) }}</td>
-</tr>
+{{-- HAK AMIL SECTION: Menggunakan desain yang sama dengan laporan perubahan dana --}}
+<div class="p-6 bg-white rounded-xl shadow dark:bg-gray-800">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+            <tbody>
+                <tr>
+                    <th colspan="2" class="px-2 py-2 font-bold text-lg">HAK AMIL</th>
+                </tr>
+                <tr>
+                    <td class="px-2 py-2 font-bold">1. Penerimaan Hak Amil</td>
+                    <td class="px-2 py-2 text-right font-bold">{{ number_format($totalPenerimaanHakAmil ?? 0, 0, ',', '.') }}</td>
+                </tr>
+                @if(!empty($penerimaanHakAmilDetail))
+                    @foreach($penerimaanHakAmilDetail as $jenis => $jumlah)
+                        <tr>
+                            <td class="px-2 py-1 pl-8">- {{ $jenis }}</td>
+                            <td class="px-2 py-1 text-right">{{ number_format($jumlah ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    @endforeach
+                @endif
+                <tr>
+                    <td class="px-2 py-2 font-bold">2. Penggunaan Hak Amil</td>
+                    <td class="px-2 py-2 text-right font-bold">{{ number_format($totalPenggunaanHakAmil ?? 0, 0, ',', '.') }}</td>
+                </tr>
+                @if(!empty($penggunaanHakAmilDetail))
+                    @foreach($penggunaanHakAmilDetail as $jenis => $jumlah)
+                        <tr>
+                            <td class="px-2 py-1 pl-8">- {{ $jenis }}</td>
+                            <td class="px-2 py-1 text-right">{{ number_format($jumlah ?? 0, 0, ',', '.') }}</td>
+                        </tr>
+                    @endforeach
+                @else
+                    <tr>
+                        <td class="px-2 py-1 text-red-600" colspan="2">
+                            <strong>Catatan:</strong> Tidak ada data penggunaan hak amil untuk periode ini.
+                        </td>
+                    </tr>
+                @endif
+                <tr class="font-semibold">
+                    <td class="px-2 py-2">Surplus (defisit) Hak Amil</td>
+                    <td class="px-2 py-2 text-right">{{ number_format($surplusDefisitHakAmil ?? 0, 0, ',', '.') }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

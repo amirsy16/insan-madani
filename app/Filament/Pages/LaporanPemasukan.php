@@ -44,7 +44,7 @@ class LaporanPemasukan extends Page implements HasForms, HasTable
 
     protected static ?string $navigationIcon = 'heroicon-o-document-chart-bar';
     protected static string $view = 'filament.pages.laporan-pemasukan'; //
-    protected static ?string $navigationGroup = 'Laporan'; //
+    protected static ?string $navigationGroup = 'Laporan & Keuangan'; //
     protected static ?string $title = 'Laporan Pemasukan Donasi'; //
     protected static ?string $navigationLabel = 'Pemasukan Donasi'; //
     protected static ?int $navigationSort = 1; //

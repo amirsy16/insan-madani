@@ -50,21 +50,26 @@ class DanaService
      */
     public function getLaporanPerubahanDana(string $startDate, string $endDate): array
     {
-        // Ambil semua sumber dana
         $sumberDanaList = SumberDanaPenyaluran::where('aktif', true)->get();
-        
         $result = [];
-        
-        // Proses untuk setiap sumber dana
         foreach ($sumberDanaList as $sumberDana) {
-            $result[$sumberDana->id] = $this->getLaporanDanaDetail(
+            $detail = $this->getLaporanDanaDetail(
                 $sumberDana->nama_sumber_dana,
                 $sumberDana->id,
                 $startDate,
                 $endDate
             );
+            // Jika bukan Hak Amil, hitung potongan 12% dari penerimaan
+            if (strtolower($sumberDana->nama_sumber_dana) !== 'hak amil') {
+                $detail['bagian_amil'] = round(($detail['penerimaan'] ?? 0) * 0.12);
+                // Penyaluran net = penyaluran - bagian amil
+                $detail['penyaluran_net'] = ($detail['penyaluran'] ?? 0);
+            } else {
+                $detail['bagian_amil'] = 0;
+                $detail['penyaluran_net'] = ($detail['penyaluran'] ?? 0);
+            }
+            $result[$sumberDana->id] = $detail;
         }
-        
         return $result;
     }
     
@@ -187,6 +192,68 @@ class DanaService
             'surplus_defisit' => $surplusDefisit,
             'saldo_awal' => $saldoAwal,
             'saldo_akhir' => $saldoAkhir
+        ];
+    }
+    
+    /**
+     * Ambil data penggunaan hak amil untuk periode tertentu
+     *
+     * @param string $startDate
+     * @param string $endDate
+     * @return \Illuminate\Support\Collection
+     */
+    public function getPenggunaanHakAmil(string $startDate, string $endDate)
+    {
+        return \App\Models\PenggunaanHakAmil::with('jenisPenggunaanHakAmil')
+            ->whereBetween('tanggal', [$startDate, $endDate])
+            ->orderBy('tanggal')
+            ->get();
+    }
+
+    /**
+     * Mendapatkan data penerimaan hak amil (12% dari setiap donasi terverifikasi per jenis donasi) dan penggunaan hak amil dari resource PenggunaanHakAmil
+     * @param string $startDate
+     * @param string $endDate
+     * @return array
+     */
+    public function getLaporanHakAmil(string $startDate, string $endDate): array
+    {
+        // 1. Hitung penerimaan hak amil per jenis donasi (12% dari donasi terverifikasi)
+        $jenisDonasiList = JenisDonasi::where('aktif', true)->get();
+        $penerimaan = [];
+        $totalPenerimaan = 0;
+        foreach ($jenisDonasiList as $jenis) {
+            $jumlahDonasi = Donasi::where('jenis_donasi_id', $jenis->id)
+                ->where('status_konfirmasi', 'verified')
+                ->whereBetween('tanggal_donasi', [$startDate, $endDate])
+                ->sum(\DB::raw('jumlah + IFNULL(perkiraan_nilai_barang, 0)'));
+            $hakAmil = $jumlahDonasi * 0.12;
+            $penerimaan[$jenis->nama] = $hakAmil;
+            $totalPenerimaan += $hakAmil;
+        }
+
+        // 2. Ambil penggunaan hak amil dari resource PenggunaanHakAmil
+        $penggunaan = \App\Models\PenggunaanHakAmil::with('jenisPenggunaanHakAmil')
+            ->whereBetween('tanggal', [$startDate, $endDate])
+            ->orderBy('tanggal')
+            ->get();
+        $penggunaanDetail = [];
+        $totalPenggunaan = 0;
+        foreach ($penggunaan as $item) {
+            $nama = $item->jenisPenggunaanHakAmil->nama ?? $item->keterangan ?? '-';
+            $penggunaanDetail[$nama] = ($penggunaanDetail[$nama] ?? 0) + $item->jumlah;
+            $totalPenggunaan += $item->jumlah;
+        }
+
+        // 3. Surplus/defisit dan saldo awal/akhir (opsional, bisa dikembangkan)
+        $surplusDefisit = $totalPenerimaan - $totalPenggunaan;
+
+        return [
+            'penerimaan_detail' => $penerimaan,
+            'total_penerimaan' => $totalPenerimaan,
+            'penggunaan_detail' => $penggunaanDetail,
+            'total_penggunaan' => $totalPenggunaan,
+            'surplus_defisit' => $surplusDefisit,
         ];
     }
 }
