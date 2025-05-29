@@ -16,4 +16,9 @@ class ListDonaturs extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+     protected function getHeaderWidgets(): array
+    {
+          return DonaturResource::getWidgets();
+    }
 }

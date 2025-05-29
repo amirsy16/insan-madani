@@ -628,5 +628,3 @@ class LaporanPemasukan extends Page implements HasForms, HasTable
         'showHambaAllahOnly' => ['except' => false], //
     ];
 }
-
-

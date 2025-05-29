@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DonasiResource\Pages;
+use App\Filament\Resources\DonasiResource\Widgets\DonasiStat;
 use App\Models\Donasi;
 use App\Models\JenisDonasi;
 use App\Models\Donatur; // Pastikan model Donatur diimpor jika digunakan di URL
@@ -307,168 +308,172 @@ class DonasiResource extends Resource
      */
     public static function table(Table $table): Table 
     {
-        return $table->columns([
-            TextColumn::make('nomor_transaksi_unik')
-                ->label('No. Transaksi')
-                ->searchable()
-                ->sortable()
-                ->copyable(),
-                
-            TextColumn::make('donatur.nama')
-                ->label('Donatur')
-                ->searchable()
-                ->sortable()
-                ->formatStateUsing(fn ($state, Donasi $record) => $record->atas_nama_hamba_allah ? 'Hamba Allah' : $state)
-                ->url(fn (Donasi $record) => $record->donatur && !$record->atas_nama_hamba_allah ? 
-                    DonaturResource::getUrl('view', ['record' => $record->donatur_id]) : null),
-                
-            TextColumn::make('jenisDonasi.nama')
-                ->label('Jenis Donasi')
-                ->searchable()
-                ->sortable(),
-                
-            TextColumn::make('jumlah')
-                ->money('IDR')
-                ->sortable()
-                ->formatStateUsing(fn ($state, Donasi $record) => 
-                    $record->jenisDonasi?->apakah_barang ? 
-                    '-' : 'Rp ' . number_format($state, 0, ',', '.')),
-                
-            TextColumn::make('tanggal_donasi')
-                ->date('d M Y')
-                ->sortable()
-                ->label('Tgl Donasi'),
-                
-            TextColumn::make('status_konfirmasi')
-                ->badge()
-                ->searchable()
-                ->sortable()
-                ->color(fn (string $state): string => match ($state) {
-                    'pending' => 'warning',
-                    'verified' => 'success',
-                    'rejected' => 'danger',
-                    default => 'gray',
-                })
-                ->formatStateUsing(fn (string $state): string => match ($state) {
-                    'pending' => 'Pending',
-                    'verified' => 'Terverifikasi',
-                    'rejected' => 'Ditolak',
-                    default => ucfirst($state),
-                }),
-                
-            TextColumn::make('perkiraan_nilai_barang')
-                ->money('IDR')
-                ->sortable()
-                ->label('Nilai Barang')
-                ->formatStateUsing(fn ($state, Donasi $record) => 
-                    $record->jenisDonasi?->apakah_barang ? 
-                    ('Rp ' . number_format($state ?? 0, 0, ',', '.')) : '-')
-                ->toggleable(isToggledHiddenByDefault: true),
-                
-            TextColumn::make('metodePembayaran.nama')
-                ->label('Metode Bayar')
-                ->sortable()
-                ->toggleable(isToggledHiddenByDefault: true),
-                
-            IconColumn::make('atas_nama_hamba_allah')
-                ->boolean()
-                ->label('Anonim')
-                ->toggleable(isToggledHiddenByDefault: true),
-                
-            TextColumn::make('fundraiser.nama_fundraiser')
-                ->label('Fundraiser')
-                ->toggleable(isToggledHiddenByDefault: true),
-                
-            TextColumn::make('dicatatOleh.name') // Intelephense mungkin masih error di sini, tapi runtime harusnya OK
-                ->label('Dicatat Oleh')
-                ->sortable()
-                ->toggleable(isToggledHiddenByDefault: true),
-                
-            TextColumn::make('created_at')
-                ->dateTime('d M Y H:i')
-                ->label('Tgl Input')
-                ->sortable()
-                ->toggleable(isToggledHiddenByDefault: true),
-        ])->filters([
-            Tables\Filters\Filter::make('tanggal_donasi')
-                ->form([
-                    Forms\Components\DatePicker::make('dari_tanggal')
-                        ->label('Dari Tanggal'),
-                    Forms\Components\DatePicker::make('sampai_tanggal')
-                        ->label('Sampai Tanggal'),
-                ])
-                ->query(function (Builder $query, array $data): Builder {
-                    return $query
-                        ->when(
-                            $data['dari_tanggal'],
-                            fn (Builder $query, $date): Builder => $query->whereDate('tanggal_donasi', '>=', $date),
-                        )
-                        ->when(
-                            $data['sampai_tanggal'],
-                            fn (Builder $query, $date): Builder => $query->whereDate('tanggal_donasi', '<=', $date),
-                        );
-                })
-                ->indicateUsing(function (array $data): array {
-                    $indicators = [];
-                    if ($data['dari_tanggal'] ?? null) {
-                        $indicators['dari_tanggal'] = 'Dari ' . Carbon::parse($data['dari_tanggal'])->translatedFormat('d M Y');
-                    }
-                    if ($data['sampai_tanggal'] ?? null) {
-                        $indicators['sampai_tanggal'] = 'Sampai ' . Carbon::parse($data['sampai_tanggal'])->translatedFormat('d M Y');
-                    }
-                    return $indicators;
-                }),
-                
-            SelectFilter::make('jenis_donasi_id')
-                ->label('Jenis Donasi')
-                ->relationship('jenisDonasi', 'nama')
-                ->preload(),
-                
-            SelectFilter::make('metode_pembayaran_id')
-                ->label('Metode Pembayaran')
-                ->relationship('metodePembayaran', 'nama')
-                ->preload(),
-                
-            SelectFilter::make('status_konfirmasi')
-                ->label('Status Konfirmasi')
-                ->options([
-                    'pending' => 'Pending', 
-                    'verified' => 'Terverifikasi', 
-                    'rejected' => 'Ditolak',    ]),
-            
-            SelectFilter::make('fundraiser_id')
-                    ->relationship('fundraiser', 'nama_fundraiser')
+        return $table
+            ->columns([
+                TextColumn::make('nomor_transaksi_unik')
+                    ->label('No. Transaksi')
                     ->searchable()
-                    ->preload()
-                    ->label('Fundraiser'),
+                    ->sortable()
+                    ->copyable(),
+                
+                TextColumn::make('donatur.nama')
+                    ->label('Donatur')
+                    ->searchable()
+                    ->sortable()
+                    ->formatStateUsing(fn ($state, Donasi $record) => $record->atas_nama_hamba_allah ? 'Hamba Allah' : $state)
+                    ->url(fn (Donasi $record) => $record->donatur && !$record->atas_nama_hamba_allah ? 
+                        DonaturResource::getUrl('view', ['record' => $record->donatur_id]) : null),
+                
+                TextColumn::make('jenisDonasi.nama')
+                    ->label('Jenis Donasi')
+                    ->searchable()
+                    ->sortable(),
+                
+                TextColumn::make('jumlah')
+                    ->money('IDR')
+                    ->sortable()
+                    ->formatStateUsing(fn ($state, Donasi $record) => 
+                        $record->jenisDonasi?->apakah_barang ? 
+                        '-' : 'Rp ' . number_format($state, 0, ',', '.')),
+                
+                TextColumn::make('tanggal_donasi')
+                    ->date('d M Y')
+                    ->sortable()
+                    ->label('Tgl Donasi'),
+                
+                TextColumn::make('status_konfirmasi')
+                    ->badge()
+                    ->searchable()
+                    ->sortable()
+                    ->color(fn (string $state): string => match ($state) {
+                        'pending' => 'warning',
+                        'verified' => 'success',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'pending' => 'Pending',
+                        'verified' => 'Terverifikasi',
+                        'rejected' => 'Ditolak',
+                        default => ucfirst($state),
+                    }),
+                
+                TextColumn::make('perkiraan_nilai_barang')
+                    ->money('IDR')
+                    ->sortable()
+                    ->label('Nilai Barang')
+                    ->formatStateUsing(fn ($state, Donasi $record) => 
+                        $record->jenisDonasi?->apakah_barang ? 
+                        ('Rp ' . number_format($state ?? 0, 0, ',', '.')) : '-')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                TextColumn::make('metodePembayaran.nama')
+                    ->label('Metode Bayar')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                IconColumn::make('atas_nama_hamba_allah')
+                    ->boolean()
+                    ->label('Anonim')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                TextColumn::make('fundraiser.nama_fundraiser')
+                    ->label('Fundraiser')
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                TextColumn::make('dicatatOleh.name') // Intelephense mungkin masih error di sini, tapi runtime harusnya OK
+                    ->label('Dicatat Oleh')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                TextColumn::make('created_at')
+                    ->dateTime('d M Y H:i')
+                    ->label('Tgl Input')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\Filter::make('tanggal_donasi')
+                    ->form([
+                        Forms\Components\DatePicker::make('dari_tanggal')
+                            ->label('Dari Tanggal'),
+                        Forms\Components\DatePicker::make('sampai_tanggal')
+                            ->label('Sampai Tanggal'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['dari_tanggal'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_donasi', '>=', $date),
+                            )
+                            ->when(
+                                $data['sampai_tanggal'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal_donasi', '<=', $date),
+                            );
+                    })
+                    ->indicateUsing(function (array $data): array {
+                        $indicators = [];
+                        if ($data['dari_tanggal'] ?? null) {
+                            $indicators['dari_tanggal'] = 'Dari ' . Carbon::parse($data['dari_tanggal'])->translatedFormat('d M Y');
+                        }
+                        if ($data['sampai_tanggal'] ?? null) {
+                            $indicators['sampai_tanggal'] = 'Sampai ' . Carbon::parse($data['sampai_tanggal'])->translatedFormat('d M Y');
+                        }
+                        return $indicators;
+                    }),
+                
+                SelectFilter::make('jenis_donasi_id')
+                    ->label('Jenis Donasi')
+                    ->relationship('jenisDonasi', 'nama')
+                    ->preload(),
+                
+                SelectFilter::make('metode_pembayaran_id')
+                    ->label('Metode Pembayaran')
+                    ->relationship('metodePembayaran', 'nama')
+                    ->preload(),
+                
+                SelectFilter::make('status_konfirmasi')
+                    ->label('Status Konfirmasi')
+                    ->options([
+                        'pending' => 'Pending', 
+                        'verified' => 'Terverifikasi', 
+                        'rejected' => 'Ditolak',    ]),
             
-            Tables\Filters\TernaryFilter::make('atas_nama_hamba_allah')
-                ->label('Donasi Anonim')
-                ->placeholder('Semua donasi')
-                ->trueLabel('Hanya donasi anonim')
-                ->falseLabel('Hanya donasi tidak anonim')
-        ])->actions([
-            Tables\Actions\ViewAction::make(),
-            Tables\Actions\EditAction::make(),
-            Tables\Actions\DeleteAction::make(),
-        ])->bulkActions([
-            Tables\Actions\BulkActionGroup::make([
-                Tables\Actions\DeleteBulkAction::make(),
-                ExportBulkAction::make() // Dari pxlrbt/filament-excel
-            ]),
-        ])->defaultSort('tanggal_donasi', 'desc')
-        ->filtersFormColumns(3);
+                SelectFilter::make('fundraiser_id')
+                        ->relationship('fundraiser', 'nama_fundraiser')
+                        ->searchable()
+                        ->preload()
+                        ->label('Fundraiser'),
+            
+                Tables\Filters\TernaryFilter::make('atas_nama_hamba_allah')
+                    ->label('Donasi Anonim')
+                    ->placeholder('Semua donasi')
+                    ->trueLabel('Hanya donasi anonim')
+                    ->falseLabel('Hanya donasi tidak anonim')
+            ])
+            ->filtersFormColumns(3)
+            ->actions([
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                    ExportBulkAction::make() // Dari pxlrbt/filament-excel
+                ]),
+            ])
+            ->defaultSort('tanggal_donasi', 'desc');
     }
 
     /**
      * Definisi relasi yang tersedia untuk resource ini
      */
-    public static function getRelations(): array
-    {
-        return [
-            // Relation managers jika ada
-        ];
-    }
+  public static function getRelations(): array
+{
+    return [
+    ];
+}
 
     /**
      * Definisi halaman yang tersedia untuk resource ini
@@ -482,4 +487,23 @@ class DonasiResource extends Resource
             'edit' => Pages\EditDonasi::route('/{record}/edit'),
         ];
     }
+
+     public static function getWidgets(): array
+    {
+        return [
+            DonasiResource\Widgets\DonasiStat::class,
+        ];
+    }
+
 }
+
+
+
+
+
+
+
+
+
+
+

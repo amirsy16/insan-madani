@@ -26,4 +26,6 @@ class Donasi extends Model {
     public function fundraiser(): BelongsTo { return $this->belongsTo(Fundraiser::class, 'fundraiser_id'); }
     public function dikonfirmasiOleh(): BelongsTo { return $this->belongsTo(User::class, 'dikofirmasi_oleh_user_id'); }
     public function dicatatOleh(): BelongsTo { return $this->belongsTo(User::class, 'dicatat_oleh_user_id'); }
+
+  
 }

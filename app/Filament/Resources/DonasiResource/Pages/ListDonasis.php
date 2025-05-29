@@ -16,4 +16,10 @@ class ListDonasis extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+     protected function getHeaderWidgets(): array
+    {
+          return DonasiResource::getWidgets();
+    }
 }
+

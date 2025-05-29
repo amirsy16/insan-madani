@@ -268,6 +268,13 @@ class DonaturResource extends Resource
             'edit' => Pages\EditDonatur::route('/{record}/edit'),
         ];
     }
+
+       public static function getWidgets(): array
+    {
+        return [
+            DonaturResource\Widgets\DonaturStats::class,
+        ];
+    }
 }
 
 

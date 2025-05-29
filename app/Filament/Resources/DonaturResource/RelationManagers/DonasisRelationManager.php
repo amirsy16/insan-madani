@@ -10,13 +10,16 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Models\JenisDonasi;
+use App\Models\Donasi;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Carbon\Carbon;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
@@ -36,7 +39,11 @@ class DonasisRelationManager extends RelationManager
                     ->required()
                     ->label('Jenis Donasi')
                     ->reactive()
-                    ->afterStateUpdated(fn (callable $set) => $set('keterangan_infak_khusus', null)->set('deskripsi_barang', null)->set('perkiraan_nilai_barang', null)),
+                    ->afterStateUpdated(function (Set $set) {
+                        $set('keterangan_infak_khusus', null);
+                        $set('deskripsi_barang', null);
+                        $set('perkiraan_nilai_barang', null);
+                    }),
                 
                 Select::make('metode_pembayaran_id')
                     ->relationship('metodePembayaran', 'nama')
@@ -100,10 +107,6 @@ class DonasisRelationManager extends RelationManager
                 Toggle::make('atas_nama_hamba_allah')
                     ->label('Sembunyikan Nama Donatur (Hamba Allah)'),
                 
-                TextInput::make('nomor_transaksi_unik')
-                    ->label('No. Transaksi/Invoice')
-                    ->unique(ignoreRecord: true),
-                
                 Select::make('status_konfirmasi')
                     ->options([
                         'pending' => 'Pending',
@@ -115,6 +118,18 @@ class DonasisRelationManager extends RelationManager
                 
                 Textarea::make('catatan_konfirmasi')
                     ->label('Catatan Konfirmasi Admin'),
+                
+                // Hidden field for transaction number - will be auto-generated
+                Hidden::make('nomor_transaksi_unik')
+                    ->default(fn () => 'TRX' . strtoupper(uniqid()))
+                    ->dehydrated()
+                    ->required()
+                    ->unique(Donasi::class, 'nomor_transaksi_unik', ignoreRecord: true),
+                
+                // Hidden field for tracking who created the record
+                Hidden::make('dicatat_oleh_user_id')
+                    ->default(fn () => auth()->id())
+                    ->dehydrated(),
             ]);
     }
 
@@ -126,7 +141,8 @@ class DonasisRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('nomor_transaksi_unik')
                     ->label('No. Transaksi')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->copyable(),
                 
                 Tables\Columns\TextColumn::make('jenisDonasi.nama')
                     ->label('Jenis Donasi')
@@ -138,11 +154,11 @@ class DonasisRelationManager extends RelationManager
                     ->sortable()
                     ->formatStateUsing(fn ($state, $record) => $record->jenisDonasi?->apakah_barang ? '-' : 'Rp ' . number_format($state, 0, ',', '.')),
                 
-                // Tables\Columns\TextColumn::make('perkiraan_nilai_barang')
-                //     ->money('IDR')
-                //     ->sortable()
-                //     ->label('Nilai Barang')
-                //     ->formatStateUsing(fn ($state, $record) => $record->jenisDonasi?->apakah_barang ? ('Rp ' . number_format($state, 0, ',', '.')) : '-'),
+                Tables\Columns\TextColumn::make('perkiraan_nilai_barang')
+                    ->money('IDR')
+                    ->sortable()
+                    ->label('Nilai Barang')
+                    ->formatStateUsing(fn ($state, $record) => $record->jenisDonasi?->apakah_barang && $state ? ('Rp ' . number_format($state, 0, ',', '.')) : '-'),
                 
                 Tables\Columns\TextColumn::make('tanggal_donasi')
                     ->date('d M Y')
@@ -226,5 +242,7 @@ class DonasisRelationManager extends RelationManager
 
     
 }
+
+
 
 
