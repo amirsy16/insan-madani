@@ -10,6 +10,7 @@
         "filament/filament": "^3.3",
         "laravel/framework": "^11.0",
         "laravel/tinker": "^2.9",
+        "leandrocfe/filament-apex-charts": "^3.1",
         "pxlrbt/filament-excel": "2.0",
         "spatie/laravel-activitylog": "^4.10"
     },
@@ -73,4 +74,3 @@
     "prefer-stable": true
     
 }
-
