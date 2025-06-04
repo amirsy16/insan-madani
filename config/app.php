@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Application Name
@@ -65,7 +64,7 @@ return [
     |
     */
 
-    'timezone' => env('APP_TIMEZONE', 'UTC'),
+    'timezone' => env('APP_TIMEZONE', 'Asia/Jakarta'),
 
     /*
     |--------------------------------------------------------------------------
@@ -78,7 +77,7 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'id'),
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
@@ -123,6 +122,21 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Organization Details
+    |--------------------------------------------------------------------------
+    |
+    | These values are used for invoice generation and email templates
+    | to display organization information.
+    |
+    */
+
+    'organization_name' => env('ORGANIZATION_NAME', 'Yayasan Amal Kita'),
+    'organization_address' => env('ORGANIZATION_ADDRESS', 'Jl. Contoh No. 123, Jakarta 10110'),
+    'organization_phone' => env('ORGANIZATION_PHONE', '021-1234567'),
+    'organization_email' => env('ORGANIZATION_EMAIL', 'info@amalkit.org'),
+    'organization_website' => env('ORGANIZATION_WEBSITE', 'www.amalkit.org'),
 ];
 
 

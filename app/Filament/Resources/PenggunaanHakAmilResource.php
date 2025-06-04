@@ -21,6 +21,11 @@ class PenggunaanHakAmilResource extends Resource
     protected static ?string $navigationGroup = 'Laporan & Keuangan';
     protected static ?string $modelLabel = 'Penggunaan Hak Amil';
     protected static ?int $navigationSort = 3; // Atur urutan navigasi jika perlu
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return __('app.navigation.groups.reports_finance');
+    }
 
     public static function form(Form $form): Form
     {

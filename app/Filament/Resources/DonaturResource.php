@@ -18,6 +18,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Filament\Tables\Filters\TernaryFilter;
 use Carbon\Carbon;
 
@@ -32,6 +33,11 @@ class DonaturResource extends Resource
     protected static ?string $pluralModelLabel = 'Donatur';
     
     protected static ?string $modelLabel = 'Donatur';
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return __('app.navigation.groups.program');
+    }
 
     public static function form(Form $form): Form
     {
@@ -248,6 +254,7 @@ class DonaturResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    ExportBulkAction::make() // Dari pxlrbt/filament-excel
                 ]),
             ]);
     }

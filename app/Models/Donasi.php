@@ -3,6 +3,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Donasi extends Model {
     use HasFactory;
@@ -26,6 +27,27 @@ class Donasi extends Model {
     public function fundraiser(): BelongsTo { return $this->belongsTo(Fundraiser::class, 'fundraiser_id'); }
     public function dikonfirmasiOleh(): BelongsTo { return $this->belongsTo(User::class, 'dikofirmasi_oleh_user_id'); }
     public function dicatatOleh(): BelongsTo { return $this->belongsTo(User::class, 'dicatat_oleh_user_id'); }
-
-  
+    public function invoices(): HasMany { return $this->hasMany(InvoiceDonasi::class); }
+    /**
+     * Get the latest invoice for this donation
+     */
+    public function latestInvoice(): BelongsTo
+    {
+        return $this->belongsTo(InvoiceDonasi::class, 'id', 'donasi_id')
+                    ->latest();
+    }
+    /**
+     * Check if this donation has any invoices
+     */
+    public function hasInvoices(): bool
+    {
+        return $this->invoices()->exists();
+    }
+    /**
+     * Get successful invoice deliveries
+     */
+    public function successfulInvoices(): HasMany
+    {
+        return $this->invoices()->whereIn('delivery_status', ['sent', 'delivered']);
+    }
 }

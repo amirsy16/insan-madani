@@ -31,7 +31,14 @@
     </div>
 
     <div class="space-y-8">
-        @forelse ($reportData as $fundKey => $data)
+        @php
+            // Filter out summary data from main report loop
+            $filteredReportData = collect($reportData)->filter(function($data, $key) {
+                return $key !== 'summary' && is_array($data) && isset($data['title']);
+            });
+        @endphp
+        
+        @forelse ($filteredReportData as $fundKey => $data)
             <div class="p-6 bg-white rounded-xl shadow dark:bg-gray-800">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
@@ -172,5 +179,69 @@
             'totalPenggunaanHakAmil' => $totalPenggunaanHakAmil,
             'surplusDefisitHakAmil' => $surplusDefisitHakAmil,
         ])
+
+        {{-- SUMMARY TOTAL SALDO SECTION --}}
+        @if (!empty($summaryData))
+        <div class="p-6 bg-gradient-to-r from-blue-50 to-indigo-100 rounded-xl shadow-lg border-2 border-blue-200 dark:from-gray-800 dark:to-gray-700 dark:border-gray-600">
+            <h3 class="text-xl font-bold text-blue-900 dark:text-blue-100 mb-4 text-center">
+                📊 RINGKASAN TOTAL LAPORAN KEUANGAN
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <tbody>
+                        <tr class="border-b border-blue-200 dark:border-gray-600">
+                            <td class="px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">Total Saldo Awal</td>
+                            <td class="px-4 py-3 text-right font-bold text-green-700 dark:text-green-400">
+                                Rp {{ number_format($summaryData['total_saldo_awal'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        <tr class="border-b border-blue-200 dark:border-gray-600">
+                            <td class="px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">Total Penerimaan</td>
+                            <td class="px-4 py-3 text-right font-bold text-green-700 dark:text-green-400">
+                                Rp {{ number_format($summaryData['total_penerimaan'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        <tr class="border-b border-blue-200 dark:border-gray-600">
+                            <td class="px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">Total Bagian Amil</td>
+                            <td class="px-4 py-3 text-right font-bold text-orange-600 dark:text-orange-400">
+                                Rp {{ number_format($summaryData['total_bagian_amil'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        <tr class="border-b border-blue-200 dark:border-gray-600">
+                            <td class="px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">Total Penyaluran</td>
+                            <td class="px-4 py-3 text-right font-bold text-red-600 dark:text-red-400">
+                                Rp {{ number_format($summaryData['total_penyaluran'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        <tr class="border-b-2 border-blue-300 dark:border-gray-500">
+                            <td class="px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">Total Surplus/Defisit</td>
+                            <td class="px-4 py-3 text-right font-bold 
+                                {{ ($summaryData['total_surplus_defisit'] ?? 0) >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                Rp {{ number_format($summaryData['total_surplus_defisit'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                        <tr class="bg-blue-100 dark:bg-gray-600">
+                            <td class="px-4 py-4 font-bold text-lg text-blue-900 dark:text-blue-100">
+                                💰 TOTAL SISA SALDO AKHIR
+                            </td>
+                            <td class="px-4 py-4 text-right font-bold text-2xl 
+                                {{ ($summaryData['total_saldo_akhir'] ?? 0) >= 0 ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400' }}">
+                                Rp {{ number_format($summaryData['total_saldo_akhir'] ?? 0, 0, ',', '.') }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            {{-- Indikator Status Keuangan --}}
+            @if (!empty($financialStatus))
+            <div class="mt-4 p-3 rounded-lg text-center border {{ $financialStatus['color_class'] }}">
+                <span class="font-semibold">
+                    {{ $financialStatus['icon'] }} Status Keuangan: {{ $financialStatus['status'] }} - {{ $financialStatus['message'] }}
+                </span>
+            </div>
+            @endif
+        </div>
+        @endif
     </div>
 </x-filament-panels::page>

@@ -26,6 +26,9 @@ use Filament\Tables\Filters\SelectFilter;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Filament\Notifications\Notification;
+use App\Services\InvoiceDeliveryService;
 
 class DonasiResource extends Resource
 {
@@ -37,6 +40,11 @@ class DonasiResource extends Resource
     protected static ?string $modelLabel = 'Donasi';
     protected static ?string $pluralModelLabel = 'Donasi';
     protected static ?int $navigationSort = 2;
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return __('app.navigation.groups.program');
+    }
 
     /**
      * Definisi form untuk halaman create dan edit donasi
@@ -115,11 +123,11 @@ class DonasiResource extends Resource
                         ->helperText('Masukkan jumlah donasi dalam Rupiah')
                         ->prefix('Rp')
                         ->numeric()
-                        ->requiredUnless('jenis_donasi_id', function (Get $get) {
+                        ->required(function (Get $get) {
                             $jenisDonasiId = $get('jenis_donasi_id');
                             if (!$jenisDonasiId) return true; // Jika jenis donasi belum dipilih, anggap wajib
                             $jenisDonasi = JenisDonasi::find($jenisDonasiId);
-                            return $jenisDonasi && $jenisDonasi->apakah_barang; // Tidak wajib jika barang
+                            return !($jenisDonasi && $jenisDonasi->apakah_barang); // Wajib jika bukan barang
                         })
                         ->dehydrateStateUsing(fn ($state) => 
                             $state ? (float) str_replace(['.', ','], ['', '.'], $state) : null
@@ -233,7 +241,7 @@ class DonasiResource extends Resource
                         ->reactive()
                         ->afterStateUpdated(function (callable $set, $state) {
                             if ($state !== 'pending') {
-                                $set('dikofirmasi_oleh_user_id', auth()->id());
+                                $set('dikofirmasi_oleh_user_id', Auth::id());
                                 $set('dikonfirmasi_pada', now());
                             } else {
                                 $set('dikofirmasi_oleh_user_id', null);
@@ -277,7 +285,7 @@ class DonasiResource extends Resource
             Placeholder::make('info_pencatatan') // Mengganti key agar unik dari field lain
                 ->label('Informasi Pencatatan')
                 ->content(function (?Donasi $record): string { // Type hint $record
-                    $currentUser = auth()->user();
+                    $currentUser = Auth::user();
                     if (!$record || $record->wasRecentlyCreated || !$record->dicatatOleh) { // Cek jika record baru atau belum ada pencatat
                         return 'Akan dicatat oleh: ' . ($currentUser?->name ?? 'Sistem');
                     }
@@ -298,7 +306,7 @@ class DonasiResource extends Resource
                 ->readOnlyOn('edit'), // Hanya bisa diisi saat create
             
             Forms\Components\Hidden::make('dicatat_oleh_user_id')
-                ->default(fn () => auth()->id())
+                ->default(fn () => Auth::id())
                 ->dehydrated(),
         ]);
     }
@@ -455,6 +463,71 @@ class DonasiResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                
+                // Action untuk Generate dan Kirim Invoice
+                Tables\Actions\Action::make('generateInvoice')
+                    ->label('Kirim Invoice')
+                    ->icon('heroicon-o-document-text')
+                    ->color('success')
+                    ->visible(fn (Donasi $record) => $record->status_konfirmasi === 'verified')
+                    ->form([
+                        Forms\Components\Select::make('delivery_method')
+                            ->label('Metode Pengiriman')
+                            ->options(function (Donasi $record) {
+                                $service = app(InvoiceDeliveryService::class);
+                                return $service->formatDeliveryMethodsForUI($record->donatur);
+                            })
+                            ->default(function (Donasi $record) {
+                                $service = app(InvoiceDeliveryService::class);
+                                return $service->determineDeliveryMethod($record->donatur, $record);
+                            })
+                            ->required(),
+                            
+                        Forms\Components\Textarea::make('delivery_notes')
+                            ->label('Catatan Pengiriman')
+                            ->placeholder('Catatan tambahan untuk pengiriman invoice...')
+                            ->columnSpanFull(),
+                    ])
+                    ->action(function (Donasi $record, array $data) {
+                        $service = app(InvoiceDeliveryService::class);
+                        $deliveryMethod = $data['delivery_method'];
+                        $notes = $data['delivery_notes'] ?? '';
+                        
+                        // Process complete invoice delivery
+                        $result = $service->processInvoiceDelivery($record, $deliveryMethod, $notes);
+                        
+                        if ($result['success']) {
+                            $notification = Notification::make()
+                                ->title('Invoice Berhasil Diproses')
+                                ->body($result['message'])
+                                ->success()
+                                ->duration(5000);
+                                
+                            // Add download action if applicable
+                            if (isset($result['download_url']) && $deliveryMethod === 'download') {
+                                $notification->actions([
+                                    \Filament\Notifications\Actions\Action::make('download')
+                                        ->label('Download PDF')
+                                        ->url($result['download_url'])
+                                        ->openUrlInNewTab()
+                                        ->button(),
+                                ]);
+                            }
+                            
+                            $notification->send();
+                        } else {
+                            Notification::make()
+                                ->title('Gagal Memproses Invoice')
+                                ->body($result['message'] ?? 'Terjadi kesalahan saat memproses invoice.')
+                                ->danger()
+                                ->duration(8000)
+                                ->send();
+                        }
+                    })
+                    ->modalHeading('Kirim Invoice Donasi')
+                    ->modalSubheading(fn (Donasi $record) => "Donatur: " . ($record->atas_nama_hamba_allah ? 'Hamba Allah' : $record->donatur?->nama) . " | Jumlah: Rp " . number_format($record->jumlah, 0, ',', '.'))
+                    ->modalWidth('md'),
+                
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

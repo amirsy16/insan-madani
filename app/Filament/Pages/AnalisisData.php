@@ -2,8 +2,12 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\FundraiserPerformanceWidget;
 use Filament\Pages\Page;
 use App\Filament\Widgets\RingkasanStatistikUtama;
+use App\Filament\Widgets\TrenPenerimaanDonasiChart;
+use App\Filament\Widgets\MetodePembayaranChart;
+use App\Filament\Widgets\TopDonaturWidget;
 class AnalisisData extends Page
 {
     
@@ -70,10 +74,20 @@ class AnalisisData extends Page
         ];
     }
 
-//     protected function getHeaderWidgets(): array
-// {
-//     return [
-//         RingkasanStatistikUtama::class
-//     ];
-// }
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            RingkasanStatistikUtama::class,
+        ];
+    }
+
+    protected function getFooterWidgets(): array
+    {
+        return [
+            // TrenPenerimaanDonasiChart::class,
+            MetodePembayaranChart::class,
+            TopDonaturWidget::class,
+            FundraiserPerformanceWidget::class,
+        ];
+    }
 }

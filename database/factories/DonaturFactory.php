@@ -17,7 +17,11 @@ class DonaturFactory extends Factory
     public function definition(): array
     {
         return [
-            //
+            'nama' => $this->faker->name,
+            'alamat' => $this->faker->address,
+            'nomor_hp' => $this->faker->phoneNumber,
+            'email' => $this->faker->safeEmail,
+            'pekerjaan' => $this->faker->jobTitle,
         ];
     }
 }

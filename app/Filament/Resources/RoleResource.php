@@ -176,6 +176,12 @@ class RoleResource extends Resource implements HasShieldPermissions
     // }
 
     protected static ?string $navigationGroup = 'Administrator';
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return __('app.navigation.groups.administrator');
+    }
+    
     public static function getNavigationLabel(): string
     {
         return __('filament-shield::filament-shield.nav.role.label');

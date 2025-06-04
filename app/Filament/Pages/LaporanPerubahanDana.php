@@ -12,8 +12,8 @@ use Filament\Forms\Form;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
 use Filament\Actions\Action;
-use Filament\Support\Exceptions\Halt;
 use Filament\Notifications\Notification;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class LaporanPerubahanDana extends Page implements HasForms
 {
@@ -36,6 +36,9 @@ class LaporanPerubahanDana extends Page implements HasForms
     public float $totalPenerimaanHakAmil = 0;
     public array $penggunaanHakAmilDetail = [];
     public float $surplusDefisitHakAmil = 0;
+    public array $summaryData = [];
+    public float $totalSisaSaldo = 0;
+    public array $financialStatus = [];
 
     /**
      * Dijalankan saat halaman pertama kali dimuat.
@@ -98,6 +101,14 @@ class LaporanPerubahanDana extends Page implements HasForms
 
         $danaService = new DanaService();
         $this->reportData = $danaService->getLaporanPerubahanDana($this->startDate, $this->endDate);
+        
+        // Ambil data summary jika ada
+        if (isset($this->reportData['summary'])) {
+            $this->summaryData = $this->reportData['summary'];
+            $this->totalSisaSaldo = $this->summaryData['total_saldo_akhir'] ?? 0;
+            $this->financialStatus = $this->getFinancialStatus();
+        }
+        
         // Update data hak amil setiap kali filter diganti
         $laporanHakAmil = $danaService->getLaporanHakAmil($this->startDate, $this->endDate);
         $this->penerimaanHakAmilDetail = $laporanHakAmil['penerimaan_detail'];
@@ -108,19 +119,109 @@ class LaporanPerubahanDana extends Page implements HasForms
     }
 
     /**
-     * Tombol untuk mencetak laporan
+     * Get financial status based on total remaining balance
      */
-    // protected function getHeaderActions(): array
-    // {
-    //     return [
-    //         Action::make('print')
-    //             ->label('Cetak Laporan')
-    //             ->icon('heroicon-o-printer')
-    //             ->url(fn () => route('laporan.perubahan-dana.print', [
-    //                 'startDate' => $this->startDate,
-    //                 'endDate' => $this->endDate,
-    //             ]))
-    //             ->openUrlInNewTab(),
-    //     ];
-    // }
+    public function getFinancialStatus(): array
+    {
+        $balance = $this->totalSisaSaldo;
+        
+        if ($balance >= 1000000) {
+            return [
+                'status' => 'SEHAT',
+                'message' => 'Saldo mencukupi untuk operasional',
+                'icon' => '✅',
+                'color_class' => 'bg-green-100 border-green-300 text-green-800 dark:bg-green-900 dark:border-green-600 dark:text-green-200'
+            ];
+        } elseif ($balance >= 0) {
+            return [
+                'status' => 'PERLU PERHATIAN',
+                'message' => 'Saldo terbatas',
+                'icon' => '⚠️',
+                'color_class' => 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900 dark:border-yellow-600 dark:text-yellow-200'
+            ];
+        } else {
+            return [
+                'status' => 'DEFISIT',
+                'message' => 'Diperlukan tindakan segera',
+                'icon' => '❌',
+                'color_class' => 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900 dark:border-red-600 dark:text-red-200'
+            ];
+        }
+    }
+
+    /**
+     * Format currency without decimal
+     */
+    public function formatCurrency($amount): string
+    {
+        return 'Rp ' . number_format($amount ?? 0, 0, ',', '.');
+    }
+
+    /**
+     * Get color class for positive/negative amounts
+     */
+    public function getAmountColorClass($amount): string
+    {
+        return ($amount >= 0) ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400';
+    }
+
+    /**
+     * Download PDF report
+     */
+    public function downloadPDF()
+    {
+        try {
+            // Ensure we have current data
+            if (empty($this->reportData)) {
+                $this->generateReport();
+            }
+
+            $data = [
+                'reportData' => $this->reportData,
+                'summaryData' => $this->summaryData,
+                'totalSisaSaldo' => $this->totalSisaSaldo,
+                'financialStatus' => $this->financialStatus,
+                'penerimaanHakAmilDetail' => $this->penerimaanHakAmilDetail,
+                'totalPenerimaanHakAmil' => $this->totalPenerimaanHakAmil,
+                'penggunaanHakAmilDetail' => $this->penggunaanHakAmilDetail,
+                'totalPenggunaanHakAmil' => $this->totalPenggunaanHakAmil,
+                'surplusDefisitHakAmil' => $this->surplusDefisitHakAmil,
+                'startDate' => $this->startDate,
+                'endDate' => $this->endDate,
+                'generatedAt' => now()->format('d/m/Y H:i:s')
+            ];
+
+            $pdf = Pdf::loadView('laporan.pdf.perubahan-dana-simple', $data);
+            $pdf->setPaper('A4', 'portrait');
+            
+            $filename = 'Laporan_Perubahan_Dana_' . Carbon::parse($this->startDate)->format('d-m-Y') . '_sd_' . Carbon::parse($this->endDate)->format('d-m-Y') . '.pdf';
+            
+            return response()->streamDownload(function () use ($pdf) {
+                echo $pdf->output();
+            }, $filename);
+            
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error generating PDF')
+                ->body('Terjadi kesalahan: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    /**
+     * Header actions for the page
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('downloadPDF')
+                ->label('Download PDF')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('success')
+                ->action('downloadPDF')
+                ->disabled(fn() => empty($this->reportData))
+                ->tooltip('Download laporan dalam format PDF'),
+        ];
+    }
 }

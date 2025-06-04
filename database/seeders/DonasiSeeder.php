@@ -37,7 +37,7 @@ class DonasiSeeder extends Seeder
                 'jumlah' => rand(50000, 1000000),
                 'tanggal_donasi' => now()->subDays(rand(1, 180)), // Tanggal acak dalam 6 bulan terakhir
                 'status_konfirmasi' => 'verified', // <-- PENTING: Langsung verified
-                'dicatat_oleh_id' => $users->random()->id,
+                'dicatat_oleh_user_id' => $users->random()->id,
                 'atas_nama_hamba_allah' => rand(0, 1) == 1,
             ]);
         }

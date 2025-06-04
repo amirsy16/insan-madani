@@ -34,6 +34,11 @@ class ProgramPenyaluranResource extends Resource
     protected static ?string $navigationLabel = 'Penyaluran Dana';
     protected static ?string $modelLabel = 'Program Penyaluran Dana';
     protected static ?int $navigationSort = 2;
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return __('app.navigation.groups.program');
+    }
 
 
     public static function form(Form $form): Form

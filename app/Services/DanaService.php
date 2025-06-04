@@ -52,6 +52,13 @@ class DanaService
     {
         $sumberDanaList = SumberDanaPenyaluran::where('aktif', true)->get();
         $result = [];
+        $totalSaldoAwal = 0;
+        $totalPenerimaan = 0;
+        $totalBagianAmil = 0;
+        $totalPenyaluran = 0;
+        $totalSurplusDefisit = 0;
+        $totalSaldoAkhir = 0;
+        
         foreach ($sumberDanaList as $sumberDana) {
             $detail = $this->getLaporanDanaDetail(
                 $sumberDana->nama_sumber_dana,
@@ -68,8 +75,28 @@ class DanaService
                 $detail['bagian_amil'] = 0;
                 $detail['penyaluran_net'] = ($detail['penyaluran'] ?? 0);
             }
+            
+            // Akumulasi total
+            $totalSaldoAwal += $detail['saldo_awal'] ?? 0;
+            $totalPenerimaan += $detail['penerimaan'] ?? 0;
+            $totalBagianAmil += $detail['bagian_amil'] ?? 0;
+            $totalPenyaluran += $detail['penyaluran'] ?? 0;
+            $totalSurplusDefisit += $detail['surplus_defisit'] ?? 0;
+            $totalSaldoAkhir += $detail['saldo_akhir'] ?? 0;
+            
             $result[$sumberDana->id] = $detail;
         }
+        
+        // Tambahkan summary totals
+        $result['summary'] = [
+            'total_saldo_awal' => $totalSaldoAwal,
+            'total_penerimaan' => $totalPenerimaan,
+            'total_bagian_amil' => $totalBagianAmil,
+            'total_penyaluran' => $totalPenyaluran,
+            'total_surplus_defisit' => $totalSurplusDefisit,
+            'total_saldo_akhir' => $totalSaldoAkhir,
+        ];
+        
         return $result;
     }
     
@@ -226,7 +253,7 @@ class DanaService
             $jumlahDonasi = Donasi::where('jenis_donasi_id', $jenis->id)
                 ->where('status_konfirmasi', 'verified')
                 ->whereBetween('tanggal_donasi', [$startDate, $endDate])
-                ->sum(\DB::raw('jumlah + IFNULL(perkiraan_nilai_barang, 0)'));
+                ->sum(DB::raw('jumlah + IFNULL(perkiraan_nilai_barang, 0)'));
             $hakAmil = $jumlahDonasi * 0.12;
             $penerimaan[$jenis->nama] = $hakAmil;
             $totalPenerimaan += $hakAmil;

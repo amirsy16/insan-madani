@@ -23,6 +23,11 @@ class FundraiserResource extends Resource
     protected static ?string $pluralModelLabel = 'Fundraiser';
     
     protected static ?string $modelLabel = 'Fundraiser';
+    
+    public static function getNavigationGroup(): ?string
+    {
+        return __('app.navigation.groups.program');
+    }
 
     public static function form(Form $form): Form
     {

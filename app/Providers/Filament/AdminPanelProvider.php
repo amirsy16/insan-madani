@@ -32,6 +32,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->topNavigation()
+            ->brandLogo(asset('images/LOGOIM.jpg'))
+            ->brandLogoHeight('4rem')
             ->colors([
                 'primary' => Color::hex('#800020'),
                 'secondary' => Color::hex('#FFD700'),
@@ -51,7 +53,6 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 \App\Filament\Widgets\ZakatStatsOverview::class,
-                \App\Filament\Widgets\TrenDonasiChart::class,
                 \App\Filament\Widgets\TopDonaturRingkasWidget::class,
             ])
             ->middleware([
@@ -66,16 +67,30 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->plugins([
-                FilamentShieldPlugin::make(),
+                FilamentShieldPlugin::make()
+                    ->gridColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                        'lg' => 3
+                    ])
+                    ->sectionColumnSpan(1)
+                    ->checkboxListColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                        'lg' => 4,
+                    ])
+                    ->resourceCheckboxListColumns([
+                        'default' => 1,
+                        'sm' => 2,
+                    ]),
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ])
-              ->navigationGroups([
-        'Program',
-        'Laporan & Keuangan',
-        'Administrator',
-              ]);
+            ])                ->navigationGroups([
+                    __('app.navigation.groups.program'),
+                    __('app.navigation.groups.reports_finance'),
+                    __('app.navigation.groups.administrator'),
+                ]);
     }
 }
 
