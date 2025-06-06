@@ -9,6 +9,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 use App\Models\JenisDonasi;
 use App\Models\Donasi;
 use Filament\Forms\Components\Select;
@@ -128,7 +129,7 @@ class DonasisRelationManager extends RelationManager
                 
                 // Hidden field for tracking who created the record
                 Hidden::make('dicatat_oleh_user_id')
-                    ->default(fn () => auth()->id())
+                    ->default(fn () => Auth::id())
                     ->dehydrated(),
             ]);
     }

@@ -27,51 +27,71 @@ class DonasiStat extends BaseWidget
             ? app()->make('donasi.filtered.query') 
             : Donasi::query();
             
-        // Current month and year
-        $currentMonth = Carbon::now()->month;
-        $currentYear = Carbon::now()->year;
+        // Current date, month and year
+        $currentDate = Carbon::now();
+        $currentMonth = $currentDate->month;
+        $currentYear = $currentDate->year;
             
         // Calculate metrics
         // 1. Total Donasi Keseluruhan
         $totalDonasiKeseluruhan = (clone $query)
             ->where('status_konfirmasi', 'verified')
             ->sum(DB::raw('jumlah + IFNULL(perkiraan_nilai_barang, 0)'));
+        $totalTransaksiKeseluruhan = (clone $query)
+            ->where('status_konfirmasi', 'verified')
+            ->count();
             
-        // 2. Total Donasi Bulan Ini
+        // 2. Total Donasi Tahun Ini
+        $totalDonasiTahunIni = (clone $query)
+            ->where('status_konfirmasi', 'verified')
+            ->whereYear('tanggal_donasi', $currentYear)
+            ->sum(DB::raw('jumlah + IFNULL(perkiraan_nilai_barang, 0)'));
+        $totalTransaksiTahunIni = (clone $query)
+            ->where('status_konfirmasi', 'verified')
+            ->whereYear('tanggal_donasi', $currentYear)
+            ->count();
+            
+        // 3. Total Donasi Bulan Ini
         $totalDonasiBulanIni = (clone $query)
             ->where('status_konfirmasi', 'verified')
             ->whereMonth('tanggal_donasi', $currentMonth)
             ->whereYear('tanggal_donasi', $currentYear)
             ->sum(DB::raw('jumlah + IFNULL(perkiraan_nilai_barang, 0)'));
-            
-        // 3. Total Transaksi Keseluruhan
-        $totalTransaksiKeseluruhan = (clone $query)->count();
-        
-        // 4. Total Transaksi Bulan Ini
         $totalTransaksiBulanIni = (clone $query)
+            ->where('status_konfirmasi', 'verified')
             ->whereMonth('tanggal_donasi', $currentMonth)
             ->whereYear('tanggal_donasi', $currentYear)
+            ->count();
+            
+        // 4. Total Donasi Hari Ini
+        $totalDonasiHariIni = (clone $query)
+            ->where('status_konfirmasi', 'verified')
+            ->whereDate('tanggal_donasi', $currentDate->toDateString())
+            ->sum(DB::raw('jumlah + IFNULL(perkiraan_nilai_barang, 0)'));
+        $totalTransaksiHariIni = (clone $query)
+            ->where('status_konfirmasi', 'verified')
+            ->whereDate('tanggal_donasi', $currentDate->toDateString())
             ->count();
         
         return [
             Stat::make('Total Donasi Keseluruhan', 'Rp ' . number_format($totalDonasiKeseluruhan, 0, ',', '.'))
-                ->description('Donasi terverifikasi')
+                ->description('Total transaksi: ' . number_format($totalTransaksiKeseluruhan, 0, ',', '.'))
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('primary'),
                 
-            Stat::make('Total Donasi Bulan Ini', 'Rp ' . number_format($totalDonasiBulanIni, 0, ',', '.'))
-                ->description(Carbon::now()->translatedFormat('F Y'))
+            Stat::make('Total Donasi Tahun Ini', 'Rp ' . number_format($totalDonasiTahunIni, 0, ',', '.'))
+                ->description('Total transaksi: ' . number_format($totalTransaksiTahunIni, 0, ',', '.') . ' (' . $currentYear . ')')
                 ->descriptionIcon('heroicon-m-calendar')
                 ->color('success'),
                 
-            Stat::make('Total Transaksi Keseluruhan', number_format($totalTransaksiKeseluruhan, 0, ',', '.'))
-                ->description('Jumlah transaksi')
-                ->descriptionIcon('heroicon-m-document-text')
-                ->color('danger'),
+            Stat::make('Total Donasi Bulan Ini', 'Rp ' . number_format($totalDonasiBulanIni, 0, ',', '.'))
+                ->description('Total transaksi: ' . number_format($totalTransaksiBulanIni, 0, ',', '.') . ' (' . $currentDate->translatedFormat('F Y') . ')')
+                ->descriptionIcon('heroicon-m-calendar-days')
+                ->color('info'),
                 
-            Stat::make('Total Transaksi Bulan Ini', number_format($totalTransaksiBulanIni, 0, ',', '.'))
-                ->description(Carbon::now()->translatedFormat('F Y'))
-                ->descriptionIcon('heroicon-m-document-text')
+            Stat::make('Total Donasi Hari Ini', 'Rp ' . number_format($totalDonasiHariIni, 0, ',', '.'))
+                ->description('Total transaksi: ' . number_format($totalTransaksiHariIni, 0, ',', '.') . ' (' . $currentDate->translatedFormat('d F Y') . ')')
+                ->descriptionIcon('heroicon-m-clock')
                 ->color('warning'),
         ];
     }

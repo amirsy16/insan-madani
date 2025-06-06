@@ -91,9 +91,11 @@ class FundraiserResource extends Resource
                     ->sortable()
                     ->label('Status Aktif'),
                     
-                Tables\Columns\TextColumn::make('donasis_count')
-                    ->counts('donasis')
-                    ->label('Jumlah Donasi')
+                Tables\Columns\TextColumn::make('donatur_count')
+                    ->getStateUsing(function ($record) {
+                        return $record->donasis()->distinct('donatur_id')->count('donatur_id');
+                    })
+                    ->label('Jumlah Donatur')
                     ->sortable(),
                     
                 Tables\Columns\TextColumn::make('created_at')

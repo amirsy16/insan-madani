@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Filament\Support\Assets\Js;
+use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Support\Facades\Vite;
 
@@ -22,5 +23,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        
     }
 }

@@ -7,6 +7,9 @@ use App\Filament\Resources\DonasiResource\Widgets\DonasiStat;
 use App\Models\Donasi;
 use App\Models\JenisDonasi;
 use App\Models\Donatur; // Pastikan model Donatur diimpor jika digunakan di URL
+use App\Models\Regency;
+use App\Models\District;
+use App\Models\Village;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -20,6 +23,7 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -64,24 +68,93 @@ class DonasiResource extends Resource
                         ->preload()
                         ->required()
                         ->createOptionForm([
+                            Forms\Components\Select::make('gender')
+                                ->options([
+                                    'male' => 'Laki-laki',
+                                    'female' => 'Perempuan',
+                                ])
+                                ->required()
+                                ->default('male')
+                                ->label('Jenis Kelamin'),
                             Forms\Components\TextInput::make('nama')
                                 ->required()
                                 ->maxLength(255)
-                                ->label('Nama Donatur'),
-                            Forms\Components\Textarea::make('alamat')
-                                ->columnSpanFull()
-                                ->label('Alamat'),
+                                ->label('Nama'),
                             Forms\Components\TextInput::make('nomor_hp')
                                 ->tel()
-                                ->maxLength(20)
+                                ->unique(Donatur::class, 'nomor_hp', ignoreRecord: true)
+                                ->nullable()
+                                ->prefix('62')
+                                ->helperText('Masukkan nomor tanpa awalan 0, contoh: 81234567890')
                                 ->label('Nomor HP'),
                             Forms\Components\TextInput::make('email')
                                 ->email()
-                                ->maxLength(255)
+                                ->unique(Donatur::class, 'email', ignoreRecord: true)
+                                ->nullable()
                                 ->label('Email'),
-                            Forms\Components\TextInput::make('pekerjaan')
-                                ->maxLength(255)
+                            Forms\Components\Select::make('pekerjaan_id')
+                                ->relationship('pekerjaan', 'nama')
+                                ->searchable()
+                                ->preload()
                                 ->label('Pekerjaan'),
+                            Forms\Components\Select::make('province_id')
+                                ->relationship('province', 'name')
+                                ->searchable()
+                                ->preload()
+                                ->label('Provinsi')
+                                ->live()
+                                ->afterStateUpdated(function (Set $set) {
+                                    $set('regency_id', null);
+                                    $set('district_id', null);
+                                    $set('village_id', null);
+                                }),
+                            Forms\Components\Select::make('regency_id')
+                                ->label('Kota/Kabupaten')
+                                ->options(function (Get $get) {
+                                    $provinceId = $get('province_id');
+                                    if (!$provinceId) {
+                                        return [];
+                                    }
+                                    return Regency::where('province_id', $provinceId)
+                                        ->pluck('name', 'id')
+                                        ->toArray();
+                                })
+                                ->searchable()
+                                ->live()
+                                ->afterStateUpdated(function (Set $set) {
+                                    $set('district_id', null);
+                                    $set('village_id', null);
+                                }),
+                            Forms\Components\Select::make('district_id')
+                                ->label('Kecamatan')
+                                ->options(function (Get $get) {
+                                    $regencyId = $get('regency_id');
+                                    if (!$regencyId) {
+                                        return [];
+                                    }
+                                    return District::where('regency_id', $regencyId)
+                                        ->pluck('name', 'id')
+                                        ->toArray();
+                                })
+                                ->searchable()
+                                ->live()
+                                ->afterStateUpdated(fn (Set $set) => $set('village_id', null)),
+                            Forms\Components\Select::make('village_id')
+                                ->label('Desa/Kelurahan')
+                                ->options(function (Get $get) {
+                                    $districtId = $get('district_id');
+                                    if (!$districtId) {
+                                        return [];
+                                    }
+                                    return Village::where('district_id', $districtId)
+                                        ->pluck('name', 'id')
+                                        ->toArray();
+                                })
+                                ->searchable(),
+                            Forms\Components\Textarea::make('alamat_detail')
+                                ->label('Detail Alamat')
+                                ->placeholder('Jalan, Nomor Rumah, RT/RW, dll')
+                                ->columnSpanFull(),
                         ])
                         ->label('Donatur'),
                     
@@ -93,8 +166,8 @@ class DonasiResource extends Resource
                         ->relationship('jenisDonasi', 'nama', function ($query) {
                             return $query->where('aktif', true);
                         })
-                        ->searchable()
-                        ->preload()
+                        ->searchable() // Label changed to match DonaturResource
+                        ->preload()// Placeholder changed to match DonaturResource
                         ->required()
                         ->label('Jenis Donasi')
                         ->reactive()
@@ -322,12 +395,18 @@ class DonasiResource extends Resource
                     ->label('No. Transaksi')
                     ->searchable()
                     ->sortable()
-                    ->copyable(),
+                    ->copyable()
+                    ->limit(12)
+                    ->tooltip(fn (Donasi $record): ?string => $record->nomor_transaksi_unik),
                 
                 TextColumn::make('donatur.nama')
                     ->label('Donatur')
                     ->searchable()
                     ->sortable()
+                    ->limit(20)
+                    ->tooltip(function (Donasi $record): ?string {
+                        return $record->atas_nama_hamba_allah ? 'Hamba Allah' : $record->donatur?->nama;
+                    })
                     ->formatStateUsing(fn ($state, Donasi $record) => $record->atas_nama_hamba_allah ? 'Hamba Allah' : $state)
                     ->url(fn (Donasi $record) => $record->donatur && !$record->atas_nama_hamba_allah ? 
                         DonaturResource::getUrl('view', ['record' => $record->donatur_id]) : null),
@@ -335,7 +414,9 @@ class DonasiResource extends Resource
                 TextColumn::make('jenisDonasi.nama')
                     ->label('Jenis Donasi')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->limit(15)
+                    ->tooltip(fn (Donasi $record): ?string => $record->jenisDonasi?->nama),
                 
                 TextColumn::make('jumlah')
                     ->money('IDR')
@@ -378,6 +459,8 @@ class DonasiResource extends Resource
                 TextColumn::make('metodePembayaran.nama')
                     ->label('Metode Bayar')
                     ->sortable()
+                    ->limit(12)
+                    ->tooltip(fn (Donasi $record): ?string => $record->metodePembayaran?->nama)
                     ->toggleable(isToggledHiddenByDefault: true),
                 
                 IconColumn::make('atas_nama_hamba_allah')
@@ -387,17 +470,39 @@ class DonasiResource extends Resource
                 
                 TextColumn::make('fundraiser.nama_fundraiser')
                     ->label('Fundraiser')
+                    ->limit(15)
+                    ->tooltip(fn (Donasi $record): ?string => $record->fundraiser?->nama_fundraiser)
                     ->toggleable(isToggledHiddenByDefault: true),
                 
                 TextColumn::make('dicatatOleh.name') // Intelephense mungkin masih error di sini, tapi runtime harusnya OK
                     ->label('Dicatat Oleh')
                     ->sortable()
+                    ->limit(15)
+                    ->tooltip(fn (Donasi $record): ?string => $record->dicatatOleh?->name)
                     ->toggleable(isToggledHiddenByDefault: true),
                 
                 TextColumn::make('created_at')
                     ->dateTime('d M Y H:i')
                     ->label('Tgl Input')
                     ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                TextColumn::make('catatan_donatur')
+                    ->label('Catatan Donatur')
+                    ->limit(30)
+                    ->tooltip(fn (Donasi $record): ?string => $record->catatan_donatur)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                TextColumn::make('keterangan_infak_khusus')
+                    ->label('Keterangan Infak')
+                    ->limit(25)
+                    ->tooltip(fn (Donasi $record): ?string => $record->keterangan_infak_khusus)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
+                TextColumn::make('deskripsi_barang')
+                    ->label('Deskripsi Barang')
+                    ->limit(25)
+                    ->tooltip(fn (Donasi $record): ?string => $record->deskripsi_barang)
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
@@ -536,7 +641,8 @@ class DonasiResource extends Resource
                     ExportBulkAction::make() // Dari pxlrbt/filament-excel
                 ]),
             ])
-            ->defaultSort('tanggal_donasi', 'desc');
+            ->defaultSort('tanggal_donasi', 'desc')
+            ->striped();
     }
 
     /**
