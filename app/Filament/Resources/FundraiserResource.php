@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Imports\FundraiserImporter;
 use App\Filament\Resources\FundraiserResource\Pages;
 use App\Models\Fundraiser;
 use Filament\Forms;
@@ -11,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Actions\ImportAction;
 
 class FundraiserResource extends Resource
 {
@@ -124,6 +126,10 @@ class FundraiserResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
+            ])
+            ->headerActions([
+                ImportAction::make()
+                    ->importer(FundraiserImporter::class),
             ])
             ->defaultSort('created_at', 'desc');
     }

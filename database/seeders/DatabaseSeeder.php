@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             SumberDanaPenyaluranSeeder::class, // Tambahkan ini sebelum JenisDonasiSeeder
             JenisDonasiSeeder::class,
             MetodePembayaranSeeder::class,
+            KategoriInfaqTerikatSeeder::class, // Tambahkan kategori infaq terikat
             DonaturSeeder::class,
             FundraiserSeeder::class,
             DonasiSeeder::class, // Donasi terakhir karena butuh ID dari tabel lain

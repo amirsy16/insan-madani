@@ -1,0 +1,174 @@
+{\rtf1\ansi\deff0 {\fonttbl {\f0 Times New Roman;}}
+{\colortbl;\red0\green0\blue0;\red255\green0\blue0;\red0\green128\blue0;}
+\f0\fs24
+
+{\b\fs28 PANDUAN IMPORT DATA SISTEM MADANI}
+\par\par
+
+{\b\fs20 DAFTAR ISI}
+\par 1. Panduan Import Donatur
+\par 2. Panduan Import Fundraiser  
+\par 3. Panduan Import Donasi
+\par 4. Tips dan Troubleshooting
+\par\par
+
+{\b\fs22 PANDUAN IMPORT DONATUR}
+\par\par
+
+{\b Format File CSV}
+\par - Nama file: donatur_import.csv
+\par - Encoding: UTF-8
+\par - Separator: Koma (,)
+\par - Header: Wajib ada di baris pertama
+\par\par
+
+{\b Kolom yang Diperlukan}
+\par\par
+
+{\b No | Nama Kolom | Wajib/Opsional | Format | Contoh | Keterangan}
+\par 1 | kode_donatur | {\b WAJIB} | Maksimal 10 karakter | DNT001 | Kode unik donatur
+\par 2 | gender | {\b WAJIB} | male/female | male | Jenis kelamin
+\par 3 | nama | {\b WAJIB} | Maksimal 255 karakter | Ahmad Syahrul | Nama lengkap
+\par 4 | province_id | Opsional | Nama provinsi | JAWA BARAT | Harus sesuai data di sistem
+\par 5 | city_id | Opsional | Nama kota/kabupaten | KOTA BANDUNG | Harus sesuai data di sistem
+\par 6 | district_id | Opsional | Nama kecamatan | CIDADAP | Harus sesuai data di sistem
+\par 7 | village_id | Opsional | Nama kelurahan/desa | CIUMBULEUIT | Harus sesuai data di sistem
+\par 8 | alamat_detail | Opsional | Teks bebas | Jl. Setiabudhi No. 123 | Alamat detail
+\par 9 | alamat_lengkap | Opsional | Teks bebas | Jl. Setiabudhi No. 123, Ciumbuleuit... | Alamat lengkap
+\par 10 | nomor_hp | Opsional | Maksimal 255 karakter | 081234567890 | Nomor handphone
+\par 11 | email | Opsional | Format email | ahmad.syahrul@example.com | Email valid
+\par 12 | pekerjaan_id | Opsional | Nama pekerjaan | Guru | Harus sesuai data di sistem
+\par\par
+
+{\b Contoh CSV Donatur:}
+\par kode_donatur,gender,nama,province_id,city_id,district_id,village_id,alamat_detail,alamat_lengkap,nomor_hp,email,pekerjaan_id
+\par DNT001,male,Ahmad Syahrul,JAWA BARAT,KOTA BANDUNG,CIDADAP,CIUMBULEUIT,Jl. Setiabudhi No. 123,Jl. Setiabudhi No. 123 Ciumbuleuit Cidadap Bandung Jawa Barat,081234567890,ahmad.syahrul@example.com,Guru
+\par DNT002,female,Siti Nurhaliza,JAWA BARAT,KOTA BANDUNG,COBLONG,LEBAK GEDE,Jl. Dipatiukur No. 45,Jl. Dipatiukur No. 45 Lebak Gede Coblong Bandung Jawa Barat,081987654321,siti.nurhaliza@example.com,Dokter
+\par\par
+
+{\b\fs22 PANDUAN IMPORT FUNDRAISER}
+\par\par
+
+{\b Format File CSV}
+\par - Nama file: fundraiser_import.csv
+\par - Encoding: UTF-8
+\par - Separator: Koma (,)
+\par - Header: Wajib ada di baris pertama
+\par\par
+
+{\b Kolom yang Diperlukan}
+\par\par
+
+{\b No | Nama Kolom | Wajib/Opsional | Format | Contoh | Keterangan}
+\par 1 | nama_fundraiser | {\b WAJIB} | Maksimal 255 karakter | Ahmad Syahrul | Nama fundraiser
+\par 2 | nomor_hp | Opsional | Maksimal 255 karakter | 081234567890 | Nomor handphone
+\par 3 | aktif | {\b WAJIB} | true/false | true | Status aktif fundraiser
+\par\par
+
+{\b Contoh CSV Fundraiser:}
+\par nama_fundraiser,nomor_hp,aktif
+\par Ahmad Syahrul,081234567890,true
+\par Budi Santoso,081987654321,false
+\par Citra Dewi,081555666777,true
+\par\par
+
+{\b\fs22 PANDUAN IMPORT DONASI}
+\par\par
+
+{\b Format File CSV}
+\par - Nama file: donasi_import.csv
+\par - Encoding: UTF-8
+\par - Separator: Koma (,)
+\par - Header: Wajib ada di baris pertama
+\par\par
+
+{\b Kolom yang Diperlukan}
+\par\par
+
+{\b No | Nama Kolom | Wajib/Opsional | Format | Contoh | Keterangan}
+\par 1 | donatur | {\b WAJIB} | Nama donatur | Kasiran Winarsih | Harus sesuai nama di data donatur
+\par 2 | jenisDonasi | {\b WAJIB} | Nama jenis donasi | Sedekah | Harus sesuai data di sistem
+\par 3 | metodePembayaran | Opsional | Nama metode | DANA | Harus sesuai data di sistem
+\par 4 | jumlah | {\b WAJIB} | Angka | 750000 | Jumlah donasi dalam rupiah
+\par 5 | tanggal_donasi | {\b WAJIB} | YYYY-MM-DD | 2025-06-09 | Format tanggal ISO
+\par\par
+
+{\b Contoh CSV Donasi:}
+\par donatur,jenisDonasi,metodePembayaran,jumlah,tanggal_donasi
+\par Kasiran Winarsih,Sedekah,DANA,750000,2025-06-09
+\par Ahmad Syahrul,Zakat Fitrah,Bank Transfer,50000,2025-06-08
+\par Siti Nurhaliza,Infaq,GOPAY,100000,2025-06-07
+\par\par
+
+{\b\fs22 TIPS DAN TROUBLESHOOTING}
+\par\par
+
+{\b Persiapan Data}
+\par 1. {\b Pastikan Excel/LibreOffice dalam format UTF-8}
+\par    - Saat save as CSV, pilih encoding UTF-8
+\par    - Untuk Excel: File > Save As > CSV UTF-8 (Comma delimited)
+\par\par
+\par 2. {\b Periksa format tanggal}
+\par    - Gunakan format YYYY-MM-DD (contoh: 2025-06-09)
+\par    - Jangan gunakan format DD/MM/YYYY atau lainnya
+\par\par
+\par 3. {\b Validasi data relasi}
+\par    - Pastikan nama donatur sudah ada di sistem sebelum import donasi
+\par    - Pastikan jenis donasi, metode pembayaran sudah ada di sistem
+\par    - Pastikan data provinsi, kota, kecamatan, desa sesuai data Indonesia
+\par\par
+
+{\b Error Umum dan Solusi}
+\par\par
+
+{\cf2\b Error: "Validation failed"}
+\par {\b Penyebab:} Data tidak sesuai format atau aturan validasi
+\par {\b Solusi:}
+\par - Periksa kolom wajib sudah diisi
+\par - Periksa format email valid
+\par - Periksa format tanggal YYYY-MM-DD
+\par - Periksa angka pada kolom jumlah (tanpa titik/koma)
+\par\par
+
+{\cf2\b Error: "Relationship not found"}
+\par {\b Penyebab:} Data relasi tidak ditemukan
+\par {\b Solusi:}
+\par - Pastikan donatur sudah ada sebelum import donasi
+\par - Pastikan jenis donasi sudah dibuat di sistem
+\par - Pastikan metode pembayaran sudah dibuat di sistem
+\par\par
+
+{\cf2\b Error: "Duplicate entry"}
+\par {\b Penyebab:} Data sudah ada di sistem
+\par {\b Solusi:}
+\par - Untuk donatur: periksa kode_donatur, email, nomor_hp unik
+\par - Untuk fundraiser: periksa nomor_hp unik
+\par - Untuk donasi: sistem akan update jika nomor_transaksi_unik sama
+\par\par
+
+{\b Urutan Import yang Disarankan}
+\par 1. {\b Import Donatur} terlebih dahulu
+\par 2. {\b Import Fundraiser} (jika diperlukan)
+\par 3. {\b Import Donasi} setelah donatur tersedia
+\par\par
+
+{\b Batasan Import}
+\par - Maksimal 1000 baris per file import
+\par - Ukuran file maksimal 2MB
+\par - Format file harus CSV
+\par\par
+
+{\b Backup Data}
+\par - {\b Selalu backup database} sebelum import data besar
+\par - Lakukan test import dengan data kecil terlebih dahulu
+\par - Simpan file CSV asli sebagai backup
+\par\par
+
+{\b Catatan Penting:}
+\par - File ini dibuat tanggal: 9 Juni 2025
+\par - Untuk pertanyaan lebih lanjut, hubungi administrator sistem
+\par - Pastikan data sudah dicek dan divalidasi sebelum import
+\par\par
+
+{\i \copyright 2025 Sistem Madani - Panduan Import Data}
+}

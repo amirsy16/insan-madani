@@ -1,0 +1,11 @@
+donatur_identifier,jenis_donasi,metode_pembayaran,fundraiser_identifier,jumlah,keterangan_infak_khusus,deskripsi_barang,perkiraan_nilai_barang,bukti_pembayaran,catatan_donatur,tanggal_donasi,atas_nama_hamba_allah,nomor_transaksi_unik,status_konfirmasi,catatan_konfirmasi
+DN25001,Zakat Fitrah,Transfer Bank,Ahmad Fundraiser,150000,Untuk keperluan pendidikan anak yatim,,,,Semoga bermanfaat untuk sesama,2025-06-09,false,TRX-20250609-001,verified,Transfer berhasil dikonfirmasi
+,Sedekah,Tunai,081234567890,75000,,,,,Atas nama Hamba Allah,2025-06-09,true,TRX-20250609-002,pending,
+081234567890,Donasi Barang,,,0,,Beras Premium 10kg; Minyak Goreng 2L; Gula Pasir 1kg,200000,,Donasi barang untuk korban bencana,2025-06-09,false,TRX-20250609-003,verified,Barang telah diterima dengan baik
+DN25002,Infaq Tidak Terikat,QRIS,,50000,Pembangunan masjid,,,,Pembayaran melalui QRIS,2025-06-09 14:30:00,false,QRS-20250609-004,verified,Pembayaran QRIS terverifikasi otomatis
+fatimah@gmail.com,Zakat Mal,GoPay,Fatimah Collector,300000,,,,,Zakat mal tahun 2025,2025-06-09,false,GPY-20250609-005,verified,Pembayaran GoPay berhasil
+,Infaq Terikat,Tunai,,25000,Beasiswa pendidikan anak kurang mampu,,,,Semoga dapat membantu,2025-06-09,true,TRX-20250609-006,pending,
+085678901234,Wakaf,Transfer Bank,,500000,Wakaf tanah untuk masjid,,,,Wakaf untuk pembangunan fasilitas umum,2025-06-09,false,WKF-20250609-007,verified,Transfer wakaf telah dikonfirmasi
+DN25003,Sedekah,OVO,Usman Pengumpul,100000,,,,,Sedekah untuk fakir miskin,2025-06-09,false,OVO-20250609-008,verified,Pembayaran OVO berhasil
+usman@yahoo.com,Donasi Barang,,,0,,Pakaian layak pakai 50pcs; Sepatu bekas layak 20 pasang,750000,,Donasi untuk korban banjir,2025-06-09,false,TRX-20250609-009,verified,Donasi pakaian telah diterima
+,Infaq Tidak Terikat,DANA,,150000,,,,,Donasi rutin bulanan,2025-06-09,true,DNA-20250609-010,verified,Pembayaran DANA sukses

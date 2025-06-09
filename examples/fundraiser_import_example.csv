@@ -1,0 +1,4 @@
+nama_fundraiser,nomor_identitas,nomor_hp,alamat,user_email,aktif
+Ahmad Fundraiser,3201234567890123,081234567890,Jl. Dakwah No. 123 Bandung,admin@madani.org,true
+Siti Fundraiser,3171987654321098,081987654321,Jl. Zakat No. 456 Jakarta,fundraiser1@madani.org,true
+Budi Fundraiser,3578555666777444,081555666777,Jl. Infaq No. 789 Surabaya,fundraiser2@madani.org,false

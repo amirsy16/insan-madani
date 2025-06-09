@@ -1,0 +1,4 @@
+kode_donatur,gender,nama,province,city_id,district,village,alamat_detail,alamat_lengkap,nomor_hp,email,pekerjaan
+DN001,L,Ahmad Donatur,Jawa Barat,3201,Bandung Wetan,Cihapit,Jl. Merdeka No. 123,Jl. Merdeka No. 123 Cihapit Bandung Wetan Bandung Jawa Barat,081234567890,ahmad.donatur@email.com,Pegawai Swasta
+DN002,P,Siti Dermawan,DKI Jakarta,3171,Menteng,Gondangdia,Jl. Sudirman No. 456,Jl. Sudirman No. 456 Gondangdia Menteng Jakarta DKI Jakarta,081987654321,siti.dermawan@email.com,Guru
+DN003,L,Budi Philanthropist,Jawa Timur,3578,Sukolilo,Keputih,Jl. Raya ITS No. 789,Jl. Raya ITS No. 789 Keputih Sukolilo Surabaya Jawa Timur,081555666777,budi.philanthropist@email.com,Dosen

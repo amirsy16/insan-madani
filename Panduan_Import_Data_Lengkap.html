@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panduan Pengisian Template CSV Donasi, Donatur, dan Fundraiser</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+        h2 {
+            color: #27ae60;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            border-radius: 8px;
+        }
+        h3 {
+            color: #e74c3c;
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-left: 5px solid #e74c3c;
+            padding-left: 15px;
+        }
+        h4 {
+            color: #8e44ad;
+            font-size: 1.2em;
+            margin-top: 25px;
+            margin-bottom: 10px;
+        }
+        .intro {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #f39c12;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #17a2b8;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #28a745;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            text-align: left;
+        }
+        th {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #e8f4f8;
+        }
+        .code {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            border-left: 4px solid #3498db;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        .step {
+            background: white;
+            border: 2px solid #3498db;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            position: relative;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .example-good {
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+            margin: 10px 0;
+        }
+        .example-bad {
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #dc3545;
+            margin: 10px 0;
+        }
+        .toc {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 30px 0;
+            border: 2px solid #dee2e6;
+        }
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 8px 0;
+            padding: 5px 0;
+        }
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .print-friendly {
+            page-break-inside: avoid;
+        }
+        @media print {
+            body { margin: 20px; background-color: white; }
+            .container { box-shadow: none; }
+            h1, h2 { page-break-after: avoid; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Panduan Pengisian Template CSV</h1>
+        
+        <div class="intro">
+            <h3 style="color: white; margin-top: 0;">Sistem Manajemen Donasi - Template CSV Donatur, Fundraiser, dan Donasi</h3>
+            <p style="font-size: 1.1em; margin-bottom: 0;">Panduan step-by-step untuk mengisi template CSV dengan format yang benar dan contoh lengkap</p>
+        </div>
+
+        <div class="toc">
+            <h3 style="color: #2c3e50; border-left: none; padding-left: 0;">📋 Daftar Isi</h3>
+            <ul>
+                <li><a href="#overview">1. Overview & Persiapan Template</a></li>
+                <li><a href="#donatur">2. Pengisian Template Donatur</a></li>
+                <li><a href="#fundraiser">3. Pengisian Template Fundraiser</a></li>
+                <li><a href="#donasi">4. Pengisian Template Donasi</a></li>
+                <li><a href="#troubleshooting">5. Troubleshooting & Tips</a></li>
+            </ul>
+        </div>
+
+        <!-- OVERVIEW -->
+        <h2 id="overview">📋 1. Overview & Persiapan Template</h2>
+        
+        <div class="info">
+            <strong>✨ Template CSV yang Tersedia:</strong>
+            <ul>
+                <li><strong>Donatur:</strong> 6 kolom utama (nama, gender, nomor_hp, email, alamat, pekerjaan_id)</li>
+                <li><strong>Fundraiser:</strong> 3 kolom utama (nama_fundraiser, nomor_hp, aktif)</li>
+                <li><strong>Donasi:</strong> 5 kolom utama (donatur, jenisDonasi, metodePembayaran, jumlah, tanggal_donasi)</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Penting Sebelum Mengisi Template:</strong>
+            <ul>
+                <li>Gunakan format CSV dengan encoding UTF-8</li>
+                <li>Pastikan semua data wajib sudah diisi</li>
+                <li>Isi template dalam urutan: Donatur → Fundraiser → Donasi</li>
+                <li>Validasi data sebelum menyimpan sebagai CSV</li>
+            </ul>
+        </div>
+
+        <!-- DONATUR IMPORT -->
+        <h2 id="donatur">👤 2. Pengisian Template Donatur</h2>
+        
+        <h3>Kolom Template Donatur (6 kolom)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Kolom</th>
+                    <th>Wajib</th>
+                    <th>Format</th>
+                    <th>Contoh</th>
+                    <th>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>nama</td>
+                    <td>Ya</td>
+                    <td>Text</td>
+                    <td>Ahmad Budi Santoso</td>
+                    <td>Nama lengkap donatur</td>
+                </tr>
+                <tr>
+                    <td>gender</td>
+                    <td>Ya</td>
+                    <td>male/female</td>
+                    <td>male</td>
+                    <td>Jenis kelamin (male atau female)</td>
+                </tr>
+                <tr>
+                    <td>nomor_hp</td>
+                    <td>Tidak</td>
+                    <td>628xxxxxxxxx</td>
+                    <td>6281234567890</td>
+                    <td>Format internasional tanpa +</td>
+                </tr>
+                <tr>
+                    <td>email</td>
+                    <td>Tidak</td>
+                    <td>email@domain.com</td>
+                    <td>ahmad.budi@gmail.com</td>
+                    <td>Email valid</td>
+                </tr>
+                <tr>
+                    <td>alamat</td>
+                    <td>Tidak</td>
+                    <td>Text</td>
+                    <td>Jl. Merdeka No. 123, RT 02/RW 05</td>
+                    <td>Alamat lengkap</td>
+                </tr>
+                <tr>
+                    <td>pekerjaan_id</td>
+                    <td>Tidak</td>
+                    <td>Text (Sesuai Master Data)</td>
+                    <td>Karyawan Swasta</td>
+                    <td>Nama pekerjaan sesuai master data</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>📝 Contoh Pengisian Template CSV Donatur:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>nama</th>
+                    <th>gender</th>
+                    <th>nomor_hp</th>
+                    <th>email</th>
+                    <th>alamat</th>
+                    <th>pekerjaan_id</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Ahmad Budi Santoso</td>
+                    <td>male</td>
+                    <td>6281234567890</td>
+                    <td>ahmad.budi@gmail.com</td>
+                    <td>Jl. Merdeka No. 123, RT 02/RW 05</td>
+                    <td>Karyawan Swasta</td>
+                </tr>
+                <tr>
+                    <td>Siti Nurhaliza</td>
+                    <td>female</td>
+                    <td>6287654321098</td>
+                    <td>siti.nur@yahoo.com</td>
+                    <td>Jl. Sudirman No. 456, RT 01/RW 03</td>
+                    <td>Mengurus Rumah Tangga</td>
+                </tr>
+                <tr>
+                    <td>Muhammad Rizki</td>
+                    <td>male</td>
+                    <td>6285555444333</td>
+                    <td>rizki.m@outlook.com</td>
+                    <td>Jl. Gatot Subroto No. 789</td>
+                    <td>Wiraswasta</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="step">
+            <div class="step-number">1</div>
+            <h4>Langkah Mengisi Template Donatur:</h4>
+            <ol>
+                <li><strong>Download template kosong:</strong> Dapatkan file template_import_donatur.csv</li>
+                <li><strong>Buka dengan Excel/Google Sheets:</strong> Pastikan dapat melihat 6 kolom header</li>
+                <li><strong>Isi data baris per baris:</strong> Mulai dari baris kedua (setelah header)</li>
+                <li><strong>Validasi setiap kolom:</strong> Pastikan format sesuai dengan panduan</li>
+                <li><strong>Simpan sebagai CSV UTF-8:</strong> Gunakan format yang tepat</li>
+                <li><strong>Test dengan data kecil:</strong> Coba 2-3 baris dulu sebelum data lengkap</li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <h4>⚠️ Validasi Khusus Template Donatur:</h4>
+            <ul>
+                <li><strong>Kolom "nama":</strong> Wajib diisi, minimal 3 karakter</li>
+                <li><strong>Kolom "gender":</strong> Hanya boleh "male" atau "female" (huruf kecil)</li>
+                <li><strong>Kolom "nomor_hp":</strong> Format 628xxxxxxxxx (dimulai 628, tanpa +62)</li>
+                <li><strong>Kolom "email":</strong> Harus format email valid dengan @ dan domain</li>
+                <li><strong>Kolom "pekerjaan_id":</strong> Harus sesuai dengan master data pekerjaan yang tersedia</li>
+            </ul>
+        </div>
+
+        <h4>📖 Panduan Detail Pengisian Setiap Kolom Donatur:</h4>
+        
+        <div class="step">
+            <div class="step-number">📝</div>
+            <h4>Petunjuk Kolom per Kolom:</h4>
+            
+            <h5><strong>1. Kolom "nama" (WAJIB)</strong></h5>
+            <ul>
+                <li>Isi dengan nama lengkap donatur</li>
+                <li>Minimal 3 karakter, maksimal 255 karakter</li>
+                <li>Boleh menggunakan spasi dan tanda baca biasa</li>
+                <li>Contoh: "Ahmad Budi Santoso", "Dr. Siti Nurhaliza, S.Pd"</li>
+            </ul>
+            
+            <h5><strong>2. Kolom "gender" (WAJIB)</strong></h5>
+            <ul>
+                <li>Hanya boleh diisi: <code>male</code> atau <code>female</code></li>
+                <li>Huruf kecil semua, tidak boleh ada spasi</li>
+                <li>male = Laki-laki, female = Perempuan</li>
+            </ul>
+            
+            <h5><strong>3. Kolom "nomor_hp" (OPSIONAL)</strong></h5>
+            <ul>
+                <li>Format: <code>628xxxxxxxxx</code> (dimulai 628, tanpa +62)</li>
+                <li>Contoh: 6281234567890, 6287654321098</li>
+                <li>Jika tidak ada, kosongkan saja</li>
+            </ul>
+            
+            <h5><strong>4. Kolom "email" (OPSIONAL)</strong></h5>
+            <ul>
+                <li>Harus format email yang valid</li>
+                <li>Contoh: ahmad.budi@gmail.com, siti@yahoo.co.id</li>
+                <li>Jika tidak ada, kosongkan saja</li>
+            </ul>
+            
+            <h5><strong>5. Kolom "alamat" (OPSIONAL)</strong></h5>
+            <ul>
+                <li>Isi alamat lengkap donatur</li>
+                <li>Boleh menggunakan koma, titik, dan karakter khusus</li>
+                <li>Contoh: "Jl. Merdeka No. 123, RT 02/RW 05, Kelurahan ABC"</li>
+            </ul>
+            
+            <h5><strong>6. Kolom "pekerjaan_id" (OPSIONAL)</strong></h5>
+            <ul>
+                <li>Harus sesuai dengan master data pekerjaan yang tersedia</li>
+                <li><strong>Pilihan yang tersedia:</strong> Belum/Tidak Bekerja, Pelajar/Mahasiswa, Mengurus Rumah Tangga, Pensiunan, Buruh, Dokter, Dosen, Guru, Karyawan Swasta, Nelayan, Pedagang, Pegawai Negeri Sipil, Petani, POLRI, TNI, Wiraswasta, Lainnya</li>
+                <li>Nama harus persis sama dengan yang ada di sistem (perhatikan huruf besar/kecil)</li>
+                <li>Jika tidak sesuai, biarkan kosong atau pilih "Lainnya"</li>
+            </ul>
+        </div>
+
+        <!-- FUNDRAISER TEMPLATE -->
+        <h2 id="fundraiser">🎯 3. Pengisian Template Fundraiser</h2>
+        
+        <h3>📋 Struktur Template Fundraiser (3 kolom)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Kolom</th>
+                    <th>Wajib</th>
+                    <th>Format</th>
+                    <th>Contoh</th>
+                    <th>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>nama_fundraiser</td>
+                    <td>Ya</td>
+                    <td>Text</td>
+                    <td>Ahmad Fundraiser</td>
+                    <td>Nama lengkap fundraiser</td>
+                </tr>
+                <tr>
+                    <td>nomor_hp</td>
+                    <td>Tidak</td>
+                    <td>628xxxxxxxxx</td>
+                    <td>6281234567890</td>
+                    <td>Format internasional tanpa +</td>
+                </tr>
+                <tr>
+                    <td>aktif</td>
+                    <td>Ya</td>
+                    <td>true/false</td>
+                    <td>true</td>
+                    <td>Status aktif fundraiser</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h4>📝 Contoh Pengisian Template CSV Fundraiser:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>nama_fundraiser</th>
+                    <th>nomor_hp</th>
+                    <th>aktif</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Ahmad Fundraiser</td>
+                    <td>6281234567890</td>
+                    <td>true</td>
+                </tr>
+                <tr>
+                    <td>Budi Pengumpul</td>
+                    <td>6287654321098</td>
+                    <td>true</td>
+                </tr>
+                <tr>
+                    <td>Siti Koordinator</td>
+                    <td>6285555444333</td>
+                    <td>false</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="step">
+            <div class="step-number">2</div>
+            <h4>Langkah Mengisi Template Fundraiser:</h4>
+            <ol>
+                <li><strong>Download template kosong:</strong> Dapatkan file template_import_fundraiser.csv</li>
+                <li><strong>Buka dengan aplikasi spreadsheet:</strong> Pastikan dapat melihat 3 kolom header</li>
+                <li><strong>Isi data fundraiser:</strong> Mulai dari baris kedua setelah header</li>
+                <li><strong>Periksa nomor HP:</strong> Pastikan format 628xxxxxxxxx</li>
+                <li><strong>Set status aktif:</strong> Gunakan "true" untuk aktif, "false" untuk non-aktif</li>
+                <li><strong>Simpan sebagai CSV UTF-8:</strong> Pastikan encoding benar</li>
+            </ol>
+        </div>
+
+        <div class="info">
+            <h4>💡 Tips Mengisi Template Fundraiser:</h4>
+            <ul>
+                <li><strong>Nama Fundraiser:</strong> Isi nama lengkap yang mudah dikenali</li>
+                <li><strong>Nomor HP:</strong> Opsional, tapi sangat disarankan untuk komunikasi</li>
+                <li><strong>Status Aktif:</strong> Set "false" jika fundraiser sudah tidak aktif</li>
+                <li>Template ini paling sederhana karena hanya 3 kolom</li>
+            </ul>
+        </div>
+
+        <!-- DONASI IMPORT -->
+        <h2 id="donasi">💰 4. Pengisian Template Donasi</h2>
+        
+        <div class="warning">
+            <strong>⚠️ Pastikan template Donatur dan Fundraiser sudah diisi dan diimport terlebih dahulu!</strong>
+        </div>
+
+        <h3>Kolom Template Donasi (5 kolom)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Kolom</th>
+                    <th>Wajib</th>
+                    <th>Format</th>
+                    <th>Contoh</th>
+                    <th>Keterangan</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>donatur</td>
+                    <td>Ya</td>
+                    <td>Kode/Email/HP</td>
+                    <td>DN25001</td>
+                    <td>Kode donatur, email, atau nomor HP</td>
+                </tr>
+                <tr>
+                    <td>jenisDonasi</td>
+                    <td>Ya</td>
+                    <td>Text</td>
+                    <td>Zakat Maal</td>
+                    <td>Sesuai master data jenis donasi</td>
+                </tr>
+                <tr>
+                    <td>metodePembayaran</td>
+                    <td>Tidak</td>
+                    <td>Text</td>
+                    <td>Rekening Zakat BSI 241...</td>
+                    <td>Sesuai master data metode pembayaran</td>
+                </tr>
+                <tr>
+                    <td>jumlah</td>
+                    <td>Ya</td>
+                    <td>Number</td>
+                    <td>500000</td>
+                    <td>Jumlah dalam rupiah (tanpa titik)</td>
+                </tr>
+                <tr>
+                    <td>tanggal_donasi</td>
+                    <td>Ya</td>
+                    <td>YYYY-MM-DD</td>
+                    <td>2025-06-15</td>
+                    <td>Format tanggal ISO</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>📋 Master Data Reference</h3>
+        
+        <h4>Jenis Donasi yang Tersedia:</h4>
+        <div class="code">
+• Zakat Maal
+• Zakat Fitrah  
+• Zakat Perusahaan
+• Infaq Terikat
+• Infaq Tidak Terikat
+• Sedekah
+• Dana CSR
+• DSKL (Dana Sosial Keagamaan Lainnya)
+• Donasi Logistik/Barang
+        </div>
+
+        <h4>Metode Pembayaran yang Tersedia:</h4>
+        <div class="code">
+• QRIS (Umum)
+• LinkAja
+• GoPay
+• OVO
+• DANA
+• Tunai (Cash)
+• Rekening Zakat BSI 241...
+• Rekening Zakat BSI 103...
+• Rekening Zakat Muamalat 441...
+• Rekening Infak BSI 103...
+• Rekening Infak Mandiri 110...
+        </div>
+
+        <div class="info">
+            <h4>💡 Panduan Pemilihan Metode Pembayaran:</h4>
+            <ul>
+                <li><strong>Digital Payment:</strong> QRIS, LinkAja, GoPay, OVO, DANA</li>
+                <li><strong>Transfer Bank Zakat:</strong> Gunakan rekening khusus zakat (BSI 241..., BSI 103..., Muamalat 441...)</li>
+                <li><strong>Transfer Bank Infak:</strong> Gunakan rekening khusus infak (BSI 103..., Mandiri 110...)</li>
+                <li><strong>Tunai:</strong> Untuk donasi yang diterima secara langsung</li>
+                <li><strong>Nama harus persis sama</strong> dengan yang ada di master data sistem</li>
+            </ul>
+        </div>
+
+        <h4>📝 Contoh Pengisian Template CSV Donasi:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>donatur</th>
+                    <th>jenisDonasi</th>
+                    <th>metodePembayaran</th>
+                    <th>jumlah</th>
+                    <th>tanggal_donasi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>DN25001</td>
+                    <td>Zakat Maal</td>
+                    <td>Rekening Zakat BSI 241...</td>
+                    <td>500000</td>
+                    <td>2025-06-15</td>
+                </tr>
+                <tr>
+                    <td>6281234567890</td>
+                    <td>Infaq Tidak Terikat</td>
+                    <td>QRIS (Umum)</td>
+                    <td>100000</td>
+                    <td>2025-06-15</td>
+                </tr>
+                <tr>
+                    <td>ahmad.budi@gmail.com</td>
+                    <td>Sedekah</td>
+                    <td>Tunai (Cash)</td>
+                    <td>50000</td>
+                    <td>2025-06-14</td>
+                </tr>
+                <tr>
+                    <td>DN25002</td>
+                    <td>Zakat Fitrah</td>
+                    <td>GoPay</td>
+                    <td>25000</td>
+                    <td>2025-06-13</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="step">
+            <div class="step-number">3</div>
+            <h4>Langkah Mengisi Template Donasi:</h4>
+            <ol>
+                <li><strong>Download template kosong:</strong> Dapatkan file template_import_donasi.csv</li>
+                <li><strong>Buka dengan aplikasi spreadsheet:</strong> Pastikan dapat melihat 5 kolom header</li>
+                <li><strong>Pastikan referensi donatur:</strong> Gunakan kode donatur, email, atau nomor HP yang valid</li>
+                <li><strong>Pilih jenis donasi:</strong> Sesuaikan dengan master data yang tersedia</li>
+                <li><strong>Tentukan metode pembayaran:</strong> Pilih sesuai dengan cara pembayaran sebenarnya</li>
+                <li><strong>Isi jumlah dan tanggal:</strong> Pastikan format angka dan tanggal benar</li>
+                <li><strong>Simpan sebagai CSV UTF-8:</strong> Pastikan encoding dan format benar</li>
+            </ol>
+        </div>
+
+        <!-- TROUBLESHOOTING -->
+        <h2 id="troubleshooting">🔧 5. Troubleshooting & Tips</h2>
+
+        <h3>❌ Error yang Sering Terjadi</h3>
+        
+        <h4>1. Format Tanggal Salah</h4>
+        <div class="example-bad">
+            <strong>❌ Salah:</strong> 15/06/2025, 15-06-2025, 2025/06/15
+        </div>
+        <div class="example-good">
+            <strong>✅ Benar:</strong> 2025-06-15
+        </div>
+
+        <h4>2. Format Nomor HP Salah</h4>
+        <div class="example-bad">
+            <strong>❌ Salah:</strong> 081234567890, +6281234567890, 08123-456-7890
+        </div>
+        <div class="example-good">
+            <strong>✅ Benar:</strong> 6281234567890
+        </div>
+
+        <h4>3. Nama Jenis Donasi Tidak Sesuai</h4>
+        <div class="example-bad">
+            <strong>❌ Salah:</strong> Zakat, Infaq, Sodakoh
+        </div>
+        <div class="example-good">
+            <strong>✅ Benar:</strong> Zakat Maal, Infaq Tidak Terikat, Sedekah
+        </div>
+
+        <h4>4. Donatur Tidak Ditemukan</h4>
+        <div class="warning">
+            <strong>Solusi:</strong> Pastikan kode donatur, email, atau nomor HP sudah ada di sistem sebelum import donasi.
+        </div>
+
+        <h3>💡 Tips Sukses Import</h3>
+        
+        <div class="success">
+            <h4>✅ Best Practices:</h4>
+            <ul>
+                <li><strong>Test dengan data kecil</strong> - Import 2-3 baris dulu untuk test</li>
+                <li><strong>Cek encoding</strong> - Pastikan file CSV menggunakan UTF-8</li>
+                <li><strong>Hindari karakter khusus</strong> - Gunakan tanda kutip untuk teks yang mengandung koma</li>
+                <li><strong>Backup terlebih dahulu</strong> - Selalu backup data sebelum import besar</li>
+                <li><strong>Import bertahap</strong> - Jangan import ribuan data sekaligus</li>
+                <li><strong>Validasi manual</strong> - Cek beberapa data hasil import secara manual</li>
+            </ul>
+        </div>
+
+        <h3>📊 Format Excel ke CSV</h3>
+        
+        <div class="step">
+            <div class="step-number">💾</div>
+            <h4>Cara Konversi Excel ke CSV UTF-8:</h4>
+            <ol>
+                <li>Buka file Excel Anda</li>
+                <li>Klik <strong>File → Save As</strong></li>
+                <li>Pilih format <strong>"CSV UTF-8 (Comma delimited)"</strong></li>
+                <li>Beri nama file dan klik <strong>Save</strong></li>
+                <li>Jika ada peringatan, klik <strong>Yes</strong> untuk melanjutkan</li>
+            </ol>
+        </div>
+
+        <h3>🔍 Validasi Data Sebelum Import</h3>
+        
+        <div class="info">
+            <h4>Checklist Sebelum Import:</h4>
+            <ul>
+                <li>☑️ Semua kolom wajib sudah terisi</li>
+                <li>☑️ Format tanggal: YYYY-MM-DD</li>
+                <li>☑️ Format nomor HP: 628xxxxxxxxx</li>
+                <li>☑️ Email format valid (ada @ dan domain)</li>
+                <li>☑️ Jenis donasi sesuai master data</li>
+                <li>☑️ Metode pembayaran sesuai master data</li>
+                <li>☑️ Jumlah donasi adalah angka (tanpa titik pemisah)</li>
+                <li>☑️ Gender: male atau female</li>
+                <li>☑️ Status aktif fundraiser: true atau false</li>
+                <li>☑️ Pekerjaan donatur sesuai master data</li>
+            </ul>
+        </div>
+
+        <h3>📞 Support & Bantuan</h3>
+        
+        <div class="info">
+            <p><strong>Jika mengalami kesulitan:</strong></p>
+            <ul>
+                <li>Periksa kembali format data sesuai panduan ini</li>
+                <li>Test dengan data sedikit terlebih dahulu</li>
+                <li>Pastikan semua master data (jenis donasi, metode pembayaran) sudah tersedia</li>
+                <li>Hubungi administrator sistem untuk bantuan lebih lanjut</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h3 style="margin-top: 0;">🎉 Selamat! </h3>
+            <p style="margin-bottom: 0;">Dengan mengikuti panduan ini, Anda sudah siap mengisi template CSV donatur, fundraiser, dan donasi dengan benar. Pastikan selalu melakukan validasi terlebih dahulu sebelum mengisi template dalam jumlah besar.</p>
+        </div>
+
+        <hr style="margin: 40px 0; border: none; border-top: 2px solid #ddd;">
+        
+        <p style="text-align: center; color: #666; font-size: 0.9em;">
+            <em>Panduan ini dibuat untuk memudahkan proses pengisian template CSV. Simpan dokumen ini untuk referensi di masa mendatang.</em><br>
+            <strong>Sistem Manajemen Donasi - {{ date('Y') }}</strong>
+        </p>
+    </div>
+</body>
+</html>

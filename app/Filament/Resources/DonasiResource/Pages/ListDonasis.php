@@ -17,7 +17,7 @@ class ListDonasis extends ListRecords
         ];
     }
 
-     protected function getHeaderWidgets(): array
+    protected function getHeaderWidgets(): array
     {
           return DonasiResource::getWidgets();
     }

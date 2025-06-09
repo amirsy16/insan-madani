@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use App\Models\JenisDonasi;
+use App\Models\KategoriInfaqTerikat;
 use App\Models\Donasi;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -53,9 +54,27 @@ class DonasisRelationManager extends RelationManager
                     ->label('Metode Pembayaran'),
                 
                 TextInput::make('jumlah')
-                    ->numeric()
+                    ->placeholder('7.000')
                     ->prefix('Rp')
+                    ->extraInputAttributes([
+                        'x-data' => '{
+                            formatNumber(value) {
+                                // Remove all non-digit characters
+                                let numbers = value.replace(/\D/g, "");
+                                // Add thousand separators
+                                return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                            }
+                        }',
+                        'x-on:input' => '$event.target.value = formatNumber($event.target.value)',
+                        'x-on:paste' => 'setTimeout(() => { $event.target.value = formatNumber($event.target.value) }, 10)'
+                    ])
                     ->required()
+                    ->dehydrateStateUsing(fn ($state) => 
+                        $state ? (float) str_replace(['.', ','], ['', '.'], $state) : null
+                    )
+                    ->formatStateUsing(fn ($state) => 
+                        $state ? number_format($state, 0, ',', '.') : null
+                    )
                     ->visible(function (Get $get) {
                         $jenisDonasiId = $get('jenis_donasi_id');
                         if (!$jenisDonasiId) return true;
@@ -63,8 +82,14 @@ class DonasisRelationManager extends RelationManager
                         return $jenisDonasi && !$jenisDonasi->apakah_barang;
                     }),
                 
-                Textarea::make('keterangan_infak_khusus')
-                    ->label('Keterangan Infak Khusus/DSKL')
+                Select::make('keterangan_infak_khusus')
+                    ->label('Kategori Infaq Terikat/DSKL')
+                    ->options(function () {
+                        return \App\Models\KategoriInfaqTerikat::aktif()
+                            ->urutan()
+                            ->pluck('nama_kategori', 'nama_kategori');
+                    })
+                    ->searchable()
                     ->visible(function (Get $get) {
                         $jenisDonasiId = $get('jenis_donasi_id');
                         if (!$jenisDonasiId) return false;
@@ -82,9 +107,27 @@ class DonasisRelationManager extends RelationManager
                     }),
                 
                 TextInput::make('perkiraan_nilai_barang')
-                    ->numeric()
+                    ->placeholder('70.000')
                     ->prefix('Rp')
                     ->label('Perkiraan Nilai Barang')
+                    ->extraInputAttributes([
+                        'x-data' => '{
+                            formatNumber(value) {
+                                // Remove all non-digit characters
+                                let numbers = value.replace(/\D/g, "");
+                                // Add thousand separators
+                                return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                            }
+                        }',
+                        'x-on:input' => '$event.target.value = formatNumber($event.target.value)',
+                        'x-on:paste' => 'setTimeout(() => { $event.target.value = formatNumber($event.target.value) }, 10)'
+                    ])
+                    ->dehydrateStateUsing(fn ($state) => 
+                        $state ? (float) str_replace(['.', ','], ['', '.'], $state) : null
+                    )
+                    ->formatStateUsing(fn ($state) => 
+                        $state ? number_format($state, 0, ',', '.') : null
+                    )
                     ->visible(function (Get $get) {
                         $jenisDonasiId = $get('jenis_donasi_id');
                         if (!$jenisDonasiId) return false;
@@ -106,7 +149,9 @@ class DonasisRelationManager extends RelationManager
                     ->label('Catatan dari Donatur'),
                 
                 Toggle::make('atas_nama_hamba_allah')
-                    ->label('Sembunyikan Nama Donatur (Hamba Allah)'),
+                    ->label('Sembunyikan Nama Donatur (Hamba Allah)')
+                    ->live()
+                    ->helperText('Donasi akan ditampilkan sebagai "Hamba Allah" dalam laporan'),
                 
                 Select::make('status_konfirmasi')
                     ->options([
@@ -151,15 +196,24 @@ class DonasisRelationManager extends RelationManager
                     ->sortable(),
                 
                 Tables\Columns\TextColumn::make('jumlah')
-                    ->money('IDR')
+                    ->label('Jumlah/Nilai')
                     ->sortable()
-                    ->formatStateUsing(fn ($state, $record) => $record->jenisDonasi?->apakah_barang ? '-' : 'Rp ' . number_format($state, 0, ',', '.')),
-                
-                Tables\Columns\TextColumn::make('perkiraan_nilai_barang')
-                    ->money('IDR')
-                    ->sortable()
-                    ->label('Nilai Barang')
-                    ->formatStateUsing(fn ($state, $record) => $record->jenisDonasi?->apakah_barang && $state ? ('Rp ' . number_format($state, 0, ',', '.')) : '-'),
+                    ->formatStateUsing(function ($state, $record) {
+                        if ($record->jenisDonasi?->apakah_barang) {
+                            // Jika donasi barang, tampilkan perkiraan nilai barang
+                            $nilai = $record->perkiraan_nilai_barang ?? 0;
+                            return 'Rp ' . number_format($nilai, 0, ',', '.') . ' (Barang)';
+                        } else {
+                            // Jika donasi uang, tampilkan jumlah donasi
+                            return 'Rp ' . number_format($state ?? 0, 0, ',', '.');
+                        }
+                    })
+                    ->tooltip(function ($record): ?string {
+                        if ($record->jenisDonasi?->apakah_barang) {
+                            return 'Perkiraan nilai: ' . $record->deskripsi_barang;
+                        }
+                        return 'Donasi tunai';
+                    }),
                 
                 Tables\Columns\TextColumn::make('tanggal_donasi')
                     ->date('d M Y')

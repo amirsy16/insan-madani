@@ -2,10 +2,12 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Imports\DonasiImporter;
 use App\Filament\Resources\DonasiResource\Pages;
 use App\Filament\Resources\DonasiResource\Widgets\DonasiStat;
 use App\Models\Donasi;
 use App\Models\JenisDonasi;
+use App\Models\KategoriInfaqTerikat;
 use App\Models\Donatur; // Pastikan model Donatur diimpor jika digunakan di URL
 use App\Models\Regency;
 use App\Models\District;
@@ -20,7 +22,6 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -33,6 +34,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Filament\Notifications\Notification;
 use App\Services\InvoiceDeliveryService;
+use Filament\Tables\Actions\Action; // Changed from Filament\Pages\Actions\Action
+use App\Imports\SistemImportLengkap;
+use Filament\Forms\Components\FileUpload;
+use Filament\Tables\Actions\ImportAction; // Add this line
 
 class DonasiResource extends Resource
 {
@@ -66,7 +71,8 @@ class DonasiResource extends Resource
                         ->relationship('donatur', 'nama')
                         ->searchable()
                         ->preload()
-                        ->required()
+                        ->required(fn (Get $get) => !$get('atas_nama_hamba_allah'))
+                        ->visible(fn (Get $get) => !$get('atas_nama_hamba_allah'))
                         ->createOptionForm([
                             Forms\Components\Select::make('gender')
                                 ->options([
@@ -160,7 +166,21 @@ class DonasiResource extends Resource
                     
                     Toggle::make('atas_nama_hamba_allah')
                         ->label('Sembunyikan Nama Donatur')
-                        ->helperText('Donasi akan tercatat sebagai "Hamba Allah"'),
+                        ->helperText('Donasi akan tercatat sebagai "Hamba Allah"')
+                        ->live()
+                        ->afterStateUpdated(function (Set $set, $state) {
+                            if ($state) {
+                                // When anonymous mode is enabled, clear the donor selection
+                                $set('donatur_id', null);
+                            }
+                        }),
+                    
+                    // Conditional placeholder to show when anonymous mode is active
+                    Forms\Components\Placeholder::make('anonymous_notice')
+                        ->label('Mode Donasi Anonim')
+                        ->content('✅ Donasi akan dicatat sebagai "Hamba Allah". Field donatur disembunyikan.')
+                        ->visible(fn (Get $get) => $get('atas_nama_hamba_allah'))
+                        ->extraAttributes(['class' => 'text-success-600 bg-success-50 p-3 rounded-lg border border-success-200']),
                     
                     Select::make('jenis_donasi_id')
                         ->relationship('jenisDonasi', 'nama', function ($query) {
@@ -195,7 +215,19 @@ class DonasiResource extends Resource
                         ->label('Jumlah Donasi (Uang)')
                         ->helperText('Masukkan jumlah donasi dalam Rupiah')
                         ->prefix('Rp')
-                        ->numeric()
+                        // ->placeholder('100.000')
+                        ->extraInputAttributes([
+                            'x-data' => '{
+                                formatNumber(value) {
+                                    // Remove all non-digit characters
+                                    let numbers = value.replace(/\D/g, "");
+                                    // Add thousand separators
+                                    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                                }
+                            }',
+                            'x-on:input' => '$event.target.value = formatNumber($event.target.value)',
+                            'x-on:paste' => 'setTimeout(() => { $event.target.value = formatNumber($event.target.value) }, 10)'
+                        ])
                         ->required(function (Get $get) {
                             $jenisDonasiId = $get('jenis_donasi_id');
                             if (!$jenisDonasiId) return true; // Jika jenis donasi belum dipilih, anggap wajib
@@ -216,9 +248,15 @@ class DonasiResource extends Resource
                             return !$jenisDonasi || !$jenisDonasi->apakah_barang; // Tampil jika bukan barang
                         }),
                     
-                    Textarea::make('keterangan_infak_khusus')
-                        ->label('Keterangan Infak Khusus/DSKL')
-                        ->placeholder('Contoh: Untuk pembangunan masjid, beasiswa, dll')
+                    Select::make('keterangan_infak_khusus')
+                        ->label('Kategori Infaq Terikat/DSKL')
+                        ->options(function () {
+                            return KategoriInfaqTerikat::aktif()
+                                ->urutan()
+                                ->pluck('nama_kategori', 'nama_kategori');
+                        })
+                        ->searchable()
+                        ->preload()
                         ->visible(function (Get $get) {
                             $jenisDonasiId = $get('jenis_donasi_id');
                             if (!$jenisDonasiId) return false;
@@ -242,8 +280,19 @@ class DonasiResource extends Resource
                         ->label('Perkiraan Nilai Barang')
                         ->helperText('Estimasi nilai barang dalam Rupiah')
                         ->prefix('Rp')
-                        ->numeric()
-                        // ->mask('999.999.999.999') // Mask bisa menyebabkan masalah dengan dehydrate/format, hati-hati
+                        ->placeholder('70.000')
+                        ->extraInputAttributes([
+                            'x-data' => '{
+                                formatNumber(value) {
+                                    // Remove all non-digit characters
+                                    let numbers = value.replace(/\D/g, "");
+                                    // Add thousand separators
+                                    return numbers.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+                                }
+                            }',
+                            'x-on:input' => '$event.target.value = formatNumber($event.target.value)',
+                            'x-on:paste' => 'setTimeout(() => { $event.target.value = formatNumber($event.target.value) }, 10)'
+                        ])
                         ->visible(function (Get $get) {
                             $jenisDonasiId = $get('jenis_donasi_id');
                             if (!$jenisDonasiId) return false;
@@ -307,7 +356,7 @@ class DonasiResource extends Resource
                         ->options([
                             'pending' => 'Pending',
                             'verified' => 'Terverifikasi',
-                            'rejected' => 'Ditolak',
+                            'rejected' => 'Belum Terverifikasi',
                         ])
                         ->default('pending')
                         ->required()
@@ -401,15 +450,24 @@ class DonasiResource extends Resource
                 
                 TextColumn::make('donatur.nama')
                     ->label('Donatur')
-                    ->searchable()
+                    ->searchable(['donatur.nama'])
                     ->sortable()
                     ->limit(20)
-                    ->tooltip(function (Donasi $record): ?string {
-                        return $record->atas_nama_hamba_allah ? 'Hamba Allah' : $record->donatur?->nama;
+                    ->getStateUsing(function (Donasi $record) {
+                        if ($record->atas_nama_hamba_allah) {
+                            return 'Hamba Allah';
+                        }
+                        return $record->donatur?->nama ?? '-';
                     })
-                    ->formatStateUsing(fn ($state, Donasi $record) => $record->atas_nama_hamba_allah ? 'Hamba Allah' : $state)
+                    ->tooltip(function (Donasi $record): ?string {
+                        if ($record->atas_nama_hamba_allah) {
+                            return 'Donasi Anonim - Hamba Allah';
+                        }
+                        return $record->donatur?->nama;
+                    })
                     ->url(fn (Donasi $record) => $record->donatur && !$record->atas_nama_hamba_allah ? 
-                        DonaturResource::getUrl('view', ['record' => $record->donatur_id]) : null),
+                        DonaturResource::getUrl('view', ['record' => $record->donatur_id]) : null)
+                    ->color(fn (Donasi $record) => $record->atas_nama_hamba_allah ? 'gray' : 'primary'),
                 
                 TextColumn::make('jenisDonasi.nama')
                     ->label('Jenis Donasi')
@@ -419,11 +477,24 @@ class DonasiResource extends Resource
                     ->tooltip(fn (Donasi $record): ?string => $record->jenisDonasi?->nama),
                 
                 TextColumn::make('jumlah')
-                    ->money('IDR')
+                    ->label('Jumlah/Nilai')
                     ->sortable()
-                    ->formatStateUsing(fn ($state, Donasi $record) => 
-                        $record->jenisDonasi?->apakah_barang ? 
-                        '-' : 'Rp ' . number_format($state, 0, ',', '.')),
+                    ->formatStateUsing(function ($state, Donasi $record) {
+                        if ($record->jenisDonasi?->apakah_barang) {
+                            // Jika donasi barang, tampilkan perkiraan nilai barang
+                            $nilai = $record->perkiraan_nilai_barang ?? 0;
+                            return 'Rp ' . number_format($nilai, 0, ',', '.') . ' (Barang)';
+                        } else {
+                            // Jika donasi uang, tampilkan jumlah donasi
+                            return 'Rp ' . number_format($state ?? 0, 0, ',', '.');
+                        }
+                    })
+                    ->tooltip(function (Donasi $record): ?string {
+                        if ($record->jenisDonasi?->apakah_barang) {
+                            return 'Perkiraan nilai: ' . $record->deskripsi_barang;
+                        }
+                        return 'Donasi tunai';
+                    }),
                 
                 TextColumn::make('tanggal_donasi')
                     ->date('d M Y')
@@ -443,18 +514,9 @@ class DonasiResource extends Resource
                     ->formatStateUsing(fn (string $state): string => match ($state) {
                         'pending' => 'Pending',
                         'verified' => 'Terverifikasi',
-                        'rejected' => 'Ditolak',
+                        'rejected' => 'Belum Terverifikasi',
                         default => ucfirst($state),
                     }),
-                
-                TextColumn::make('perkiraan_nilai_barang')
-                    ->money('IDR')
-                    ->sortable()
-                    ->label('Nilai Barang')
-                    ->formatStateUsing(fn ($state, Donasi $record) => 
-                        $record->jenisDonasi?->apakah_barang ? 
-                        ('Rp ' . number_format($state ?? 0, 0, ',', '.')) : '-')
-                    ->toggleable(isToggledHiddenByDefault: true),
                 
                 TextColumn::make('metodePembayaran.nama')
                     ->label('Metode Bayar')
@@ -638,11 +700,15 @@ class DonasiResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
-                    ExportBulkAction::make() // Dari pxlrbt/filament-excel
+                    ExportBulkAction::make(),
+                    // ... any other existing bulk actions ...
                 ]),
             ])
-            ->defaultSort('tanggal_donasi', 'desc')
-            ->striped();
+            ->headerActions([
+                ImportAction::make()
+                    ->importer(DonasiImporter::class),
+            ])
+            ->defaultSort('tanggal_donasi', 'desc');
     }
 
     /**
@@ -667,7 +733,7 @@ class DonasiResource extends Resource
         ];
     }
 
-     public static function getWidgets(): array
+    public static function getWidgets(): array
     {
         return [
             DonasiResource\Widgets\DonasiStat::class,

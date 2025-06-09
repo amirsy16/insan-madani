@@ -1,0 +1,7 @@
+donatur_identifier,jenis_donasi,metode_pembayaran,fundraiser_identifier,jumlah,keterangan_infak_khusus,deskripsi_barang,perkiraan_nilai_barang,bukti_pembayaran,catatan_donatur,tanggal_donasi,atas_nama_hamba_allah,nomor_transaksi_unik,status_konfirmasi,catatan_konfirmasi
+DN25001,Zakat Fitrah,Transfer Bank,Ahmad Fundraiser,50000,,,,,Semoga berkah untuk yang membutuhkan,2025-06-09,false,TRX-20250609-001,verified,Donasi telah dikonfirmasi dan dicatat
+081234567890,Infaq Tidak Terikat,QRIS,,100000,Untuk yatim piatu,,,,Mudah-mudahan bermanfaat untuk sesama,2025-06-09,false,TRX-20250609-002,pending,
+,Sedekah,Tunai,,25000,,,,,Atas nama Hamba Allah,2025-06-08,true,TRX-20250608-001,verified,Donasi anonim telah diterima
+DN25002,Donasi Logistik/Barang,,,0,,Beras 5kg kualitas premium,75000,,Donasi barang untuk bantuan bencana,2025-06-08,false,TRX-20250608-002,verified,Barang telah diterima dengan baik
+admin@madani.org,Zakat Maal,QRIS,,500000,,,,,Zakat dari penghasilan bulan ini,2025-06-07,false,TRX-20250607-001,verified,Transfer berhasil dikonfirmasi
+081987654321,Infaq Terikat,Transfer Bank,,150000,Pembangunan Masjid,,,,Semoga dapat membantu pembangunan,2025-06-07,false,TRX-20250607-002,pending,Menunggu konfirmasi transfer

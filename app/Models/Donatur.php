@@ -14,6 +14,7 @@ class Donatur extends Model {
         'kode_donatur', 'gender', 'nama', 'alamat_detail', 'alamat_lengkap',
         'province_id', 'city_id', 'district_id', 'village_id',
         'nomor_hp', 'email', 'pekerjaan_id'
+        // 'institusi', 'npwp', 'catatan_internal' // Removed these fields
     ];
     
     protected $casts = [

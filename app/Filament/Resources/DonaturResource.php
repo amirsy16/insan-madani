@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Imports\DonaturImporter;
 use App\Filament\Resources\DonaturResource\Pages;
 use App\Filament\Resources\DonaturResource\RelationManagers\DonasisRelationManager;
 use App\Models\Donatur;
@@ -21,6 +22,9 @@ use Filament\Tables\Filters\Filter;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Filament\Tables\Filters\TernaryFilter;
 use Carbon\Carbon;
+use Filament\Tables\Actions\ImportAction;
+use Filament\Tables\Actions\Action;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DonaturResource extends Resource
 {
@@ -256,6 +260,10 @@ class DonaturResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                     ExportBulkAction::make() // Dari pxlrbt/filament-excel
                 ]),
+            ])
+            ->headerActions([
+                ImportAction::make()
+                    ->importer(DonaturImporter::class)
             ]);
     }
 

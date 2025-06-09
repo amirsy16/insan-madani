@@ -50,6 +50,7 @@ class AdminPanelProvider extends PanelProvider
                 Pages\Dashboard::class,
                 AnalisisData::class
             ])
+            ->databaseNotifications()
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 \App\Filament\Widgets\ZakatStatsOverview::class,
