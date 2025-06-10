@@ -13,11 +13,21 @@ use Illuminate\Support\Facades\DB;
 
 class TopDonaturWidget extends BaseWidget
 {
-    protected static ?string $heading = 'Top 10 Donatur Terbaik';
+    protected static ?string $heading = null;
     
     // protected int | string | array $columnSpan = 6;
     
     protected static ?int $sort = 3;
+
+    public function getHeading(): string
+    {
+        return 'Top 10 Donatur - Analisis Lengkap';
+    }
+
+    public function getDescription(): ?string
+    {
+        return 'Analisis mendalam performa donatur dengan berbagai opsi pengurutan dan filter periode';
+    }
 
     public function table(Table $table): Table
     {
@@ -56,7 +66,21 @@ class TopDonaturWidget extends BaseWidget
                     ->suffix(' kali')
                     ->alignCenter()
                     ->badge()
-                    ->color('info'),
+                    ->sortable()
+                    ->color(fn ($state) => match (true) {
+                        $state > 10 => 'success',   // Sering - hijau
+                        $state >= 5 => 'warning',   // Sedang - kuning  
+                        $state >= 2 => 'info',      // Jarang - biru
+                        $state == 1 => 'gray',      // Sekali - abu-abu
+                        default => 'primary',
+                    })
+                    ->tooltip(fn ($state) => match (true) {
+                        $state > 10 => 'Donatur Setia (Sering)',
+                        $state >= 5 => 'Donatur Aktif (Sedang)',
+                        $state >= 2 => 'Donatur Biasa (Jarang)',
+                        $state == 1 => 'Donatur Baru (Sekali)',
+                        default => 'Donatur',
+                    }),
                     
                 Tables\Columns\TextColumn::make('rata_rata_donasi')
                     ->label('Rata-rata')
@@ -80,8 +104,8 @@ class TopDonaturWidget extends BaseWidget
                     ->query(function (Builder $query, array $data): Builder {
                         return $this->applyPeriodeFilter($query, $data['value'] ?? 'keseluruhan');
                     }),
+                    
             ])
-            ->defaultSort('total_kontribusi', 'desc')
             ->paginated(false);
     }
 
@@ -99,7 +123,6 @@ class TopDonaturWidget extends BaseWidget
                 DB::raw('MAX(donasis.tanggal_donasi) as donasi_terakhir')
             ])
             ->groupBy('donaturs.id', 'donaturs.nama')
-            ->orderByDesc('total_kontribusi')
             ->limit(10);
     }
 
@@ -116,6 +139,30 @@ class TopDonaturWidget extends BaseWidget
             case 'keseluruhan':
             default:
                 return $query; // Tidak ada filter tambahan
+        }
+    }
+
+    protected function applyUrutanDonasiFilter(Builder $query, string $urutan): Builder
+    {
+        switch ($urutan) {
+            case 'terkecil':
+                return $query->orderBy('total_kontribusi', 'asc');
+                
+            case 'terbanyak':
+            default:
+                return $query->orderByDesc('total_kontribusi');
+        }
+    }
+
+    protected function applyUrutanFrekuensiFilter(Builder $query, string $urutan): Builder
+    {
+        switch ($urutan) {
+            case 'terkecil':
+                return $query->orderBy('total_donasi_count', 'asc');
+                
+            case 'terbanyak':
+            default:
+                return $query->orderByDesc('total_donasi_count');
         }
     }
 }

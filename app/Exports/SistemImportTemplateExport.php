@@ -16,7 +16,7 @@ class SistemImportTemplateExport implements FromCollection, WithHeadings, Should
         return new Collection([
             // Example row 1 - Infaq via Transfer Bank
             [
-                'DON001 atau email@contoh.com atau 081234567890', // donatur_identifier
+                'DON001 atau email@contoh.com atau 81234567890', // donatur_identifier
                 'false',  // atas_nama_hamba_allah
                 'Infaq',  // jenis_donasi_id 
                 'Transfer Bank',  // metode_pembayaran_id

@@ -6,6 +6,8 @@ use App\Models\Donatur;
 use App\Models\Donasi;
 use App\Models\InvoiceDonasi;
 use App\Services\InvoicePdfService;
+use App\Services\WhatsAppService;
+use App\Jobs\SendWhatsAppInvoice;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Exception;
@@ -13,10 +15,15 @@ use Exception;
 class InvoiceDeliveryService
 {
     protected InvoicePdfService $pdfService;
+    protected WhatsAppService $whatsappService;
     
-    public function __construct(InvoicePdfService $pdfService)
+    public function __construct(InvoicePdfService $pdfService, WhatsAppService $whatsappService)
     {
         $this->pdfService = $pdfService;
+        $this->whatsappService = $whatsappService;
+        
+        // Increase execution time for invoice processing
+        set_time_limit(120); // 2 minutes
     }
     /**
      * Tentukan metode pengiriman terbaik berdasarkan data donatur
@@ -28,12 +35,17 @@ class InvoiceDeliveryService
             return 'email';
         }
         
-        // Priority 2: SMS jika nomor HP tersedia (WhatsApp sementara dinonaktifkan)
+        // Priority 2: WhatsApp jika nomor HP tersedia
+        if (!empty($donatur->nomor_hp)) {
+            return 'whatsapp';
+        }
+        
+        // Priority 3: SMS jika nomor HP tersedia
         if (!empty($donatur->nomor_hp)) {
             return 'sms';
         }
         
-        // Priority 3: Download manual (selalu tersedia)
+        // Priority 4: Download manual (selalu tersedia)
         return 'download';
     }
     
@@ -49,7 +61,7 @@ class InvoiceDeliveryService
         }
         
         if (!empty($donatur->nomor_hp)) {
-            // $methods[] = 'whatsapp'; // Akan diaktifkan setelah membeli layanan WhatsApp blast
+            $methods[] = 'whatsapp';
             $methods[] = 'sms';
         }
         
@@ -77,7 +89,7 @@ class InvoiceDeliveryService
         // WhatsApp dan SMS jika nomor HP tersedia
         if (!empty($donatur->nomor_hp)) {
             $formattedPhone = '62' . ltrim($donatur->nomor_hp, '0');
-            // $methods['whatsapp'] = 'WhatsApp: ' . $formattedPhone; // Akan diaktifkan setelah membeli layanan WhatsApp blast
+            $methods['whatsapp'] = 'WhatsApp: ' . $formattedPhone;
             $methods['sms'] = 'SMS: ' . $formattedPhone;
         }
         
@@ -94,8 +106,7 @@ class InvoiceDeliveryService
     {
         return match($method) {
             'email' => !empty($donatur->email) && filter_var($donatur->email, FILTER_VALIDATE_EMAIL),
-            // 'whatsapp', 'sms' => !empty($donatur->nomor_hp), // WhatsApp sementara dinonaktifkan
-            'sms' => !empty($donatur->nomor_hp),
+            'whatsapp', 'sms' => !empty($donatur->nomor_hp),
             'download', 'print' => true,
             default => false,
         };
@@ -108,7 +119,7 @@ class InvoiceDeliveryService
     {
         $message = match($method) {
             'email' => "Invoice {$invoiceNumber} akan dikirim ke email: {$donatur->email}",
-            // 'whatsapp' => "Invoice {$invoiceNumber} akan dikirim via WhatsApp ke: 62" . ltrim($donatur->nomor_hp, '0'), // Akan diaktifkan setelah membeli layanan WhatsApp blast
+            'whatsapp' => "Invoice {$invoiceNumber} sedang diproses untuk dikirim via WhatsApp ke: 62" . ltrim($donatur->nomor_hp, '0') . ". Pengiriman akan dilakukan dalam beberapa menit.",
             'sms' => "Invoice {$invoiceNumber} akan dikirim via SMS ke: 62" . ltrim($donatur->nomor_hp, '0'),
             'download' => "Invoice {$invoiceNumber} siap untuk didownload",
             'print' => "Invoice {$invoiceNumber} akan dicetak untuk pickup",
@@ -162,33 +173,76 @@ class InvoiceDeliveryService
     }
     
     /**
-     * Simulasi pengiriman WhatsApp (placeholder untuk implementasi sebenarnya)
+     * Pengiriman WhatsApp menggunakan WatZap API
      */
     public function sendViaWhatsApp(Donatur $donatur, string $invoicePath, string $invoiceNumber): bool
     {
         try {
-            // TODO: Implementasi WhatsApp Business API
-            $phone = '62' . ltrim($donatur->nomor_hp, '0');
-            $message = "Terima kasih atas donasi Anda, {$donatur->nama}. Invoice terlampir. Barakallahu fiikum 🤲";
+            // Increase execution time for this specific operation
+            set_time_limit(60);
             
-            // Contoh implementasi WhatsApp API call
-            // $whatsapp = new WhatsAppBusinessAPI();
-            // $result = $whatsapp->sendDocument([
-            //     'to' => $phone,
-            //     'document' => $invoicePath,
-            //     'caption' => $message,
-            //     'filename' => 'Invoice_Donasi.pdf'
-            // ]);
+            $phone = $donatur->nomor_hp;
             
-            Log::info('Invoice WhatsApp sent', [
+            // Generate public URL for the PDF file
+            $fileName = basename($invoicePath);
+            $publicUrl = url("storage/invoices/{$fileName}");
+            
+            // Validate that the public URL is accessible
+            try {
+                $response = \Illuminate\Support\Facades\Http::withOptions([
+                    'verify' => false, // Disable SSL verification for development
+                    'timeout' => 5
+                ])->get($publicUrl);
+                
+                if (!$response->successful()) {
+                    Log::warning('PDF URL not accessible', [
+                        'public_url' => $publicUrl,
+                        'status_code' => $response->status()
+                    ]);
+                }
+            } catch (Exception $urlException) {
+                Log::warning('PDF URL validation failed', [
+                    'public_url' => $publicUrl,
+                    'error' => $urlException->getMessage()
+                ]);
+            }
+            
+            // Prepare invoice data for message creation
+            $invoiceData = [
+                'donatur_nama' => $donatur->nama,
+                'atas_nama_hamba_allah' => false, // This will be set from the donasi record if needed
+                'nomor_invoice' => $invoiceNumber,
+                'jenis_donasi' => 'Donasi', // Default, will be overridden with actual data
+                'jumlah' => 0, // Will be set from actual donasi record
+                'tanggal_donasi' => date('Y-m-d'),
+            ];
+            
+            // Get donasi record for complete data
+            $donasi = \App\Models\Donasi::whereHas('invoices', function($query) use ($invoiceNumber) {
+                $query->where('nomor_invoice', $invoiceNumber);
+            })->with(['jenisDonasi'])->first();
+            
+            if ($donasi) {
+                $invoiceData['atas_nama_hamba_allah'] = $donasi->atas_nama_hamba_allah;
+                $invoiceData['jenis_donasi'] = $donasi->jenisDonasi->nama ?? 'Donasi';
+                $invoiceData['jumlah'] = $donasi->jumlah;
+                $invoiceData['tanggal_donasi'] = $donasi->tanggal_donasi->format('d F Y');
+            }
+            
+            // Use queue for WhatsApp sending to avoid timeout
+            SendWhatsAppInvoice::dispatch($donatur, $publicUrl, $invoiceData, $invoiceNumber);
+            
+            Log::info('Invoice WhatsApp queued for sending', [
                 'donatur_id' => $donatur->id,
                 'phone' => $phone,
                 'invoice_number' => $invoiceNumber,
+                'public_url' => $publicUrl,
             ]);
             
-            return true;
+            return true; // Return true immediately as job is queued
+            
         } catch (Exception $e) {
-            Log::error('Invoice WhatsApp failed', [
+            Log::error('Invoice WhatsApp exception', [
                 'donatur_id' => $donatur->id,
                 'phone' => $donatur->nomor_hp,
                 'error' => $e->getMessage(),
@@ -288,7 +342,7 @@ class InvoiceDeliveryService
                 'delivery_method' => $deliveryMethod,
                 'delivery_status' => 'pending',
                 'sent_to_email' => $deliveryMethod === 'email' ? $donasi->donatur->email : null,
-                'sent_to_phone' => $deliveryMethod === 'sms' ? $donasi->donatur->nomor_hp : null, // WhatsApp sementara dinonaktifkan
+                'sent_to_phone' => in_array($deliveryMethod, ['sms', 'whatsapp']) ? $donasi->donatur->nomor_hp : null,
                 'delivery_notes' => $notes,
                 'pdf_file_path' => $pdfPath,
                 'created_by_user_id' => Auth::id(),
@@ -300,8 +354,8 @@ class InvoiceDeliveryService
             // Update delivery status
             if ($result['success']) {
                 $invoiceDonasi->markAsSent();
-                if ($deliveryMethod === 'email') {
-                    $invoiceDonasi->markAsDelivered(); // Email adalah instant delivery
+                if (in_array($deliveryMethod, ['email', 'whatsapp'])) {
+                    $invoiceDonasi->markAsDelivered(); // Email dan WhatsApp adalah instant delivery
                 }
             } else {
                 $invoiceDonasi->markAsFailed($result['error'] ?? 'Unknown error');
@@ -336,7 +390,7 @@ class InvoiceDeliveryService
     {
         return match($method) {
             'email' => ['success' => $this->sendViaEmail($donatur, $pdfPath, $invoiceNumber)],
-            // 'whatsapp' => ['success' => $this->sendViaWhatsApp($donatur, $pdfPath, $invoiceNumber)], // Akan diaktifkan setelah membeli layanan WhatsApp blast
+            'whatsapp' => ['success' => $this->sendViaWhatsApp($donatur, $pdfPath, $invoiceNumber)],
             'sms' => ['success' => $this->sendViaSms($donatur, url('storage/invoices/' . basename($pdfPath)), $invoiceNumber)],
             'download' => $this->prepareForDownload($pdfPath, $invoiceNumber),
             'print' => $this->markForPrint($invoiceNumber),

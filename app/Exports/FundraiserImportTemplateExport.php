@@ -17,7 +17,7 @@ class FundraiserImportTemplateExport implements FromCollection, WithHeadings, Sh
             [
                 'Ahmad Fundraiser',  // nama_fundraiser
                 '1234567890123456',  // nomor_identitas
-                '081234567890',  // nomor_hp
+                '81234567890',  // nomor_hp
                 'Jl. Fundraiser No. 123',  // alamat
                 'admin@contoh.com',  // user_email
                 'true',  // aktif
@@ -26,7 +26,7 @@ class FundraiserImportTemplateExport implements FromCollection, WithHeadings, Sh
             [
                 'Siti Fundraiser',  // nama_fundraiser
                 '6543210987654321',  // nomor_identitas
-                '081987654321',  // nomor_hp
+                '81987654321',  // nomor_hp
                 'Jl. Dakwah No. 456',  // alamat
                 'fundraiser@contoh.com',  // user_email
                 'false',  // aktif

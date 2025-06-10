@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use App\Models\JenisDonasi;
 use App\Models\KategoriInfaqTerikat;
+use App\Models\KategoriDanaNonHalal;
 use App\Models\Donasi;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -29,6 +30,8 @@ use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 class DonasisRelationManager extends RelationManager
 {
     protected static string $relationship = 'donasis';
+
+    protected static ?string $title = 'Donasi';
 
     public function form(Form $form): Form
     {
@@ -94,7 +97,26 @@ class DonasisRelationManager extends RelationManager
                         $jenisDonasiId = $get('jenis_donasi_id');
                         if (!$jenisDonasiId) return false;
                         $jenisDonasi = JenisDonasi::find($jenisDonasiId);
-                        return $jenisDonasi && $jenisDonasi->membutuhkan_keterangan_tambahan && !$jenisDonasi->apakah_barang;
+                        return $jenisDonasi && 
+                               $jenisDonasi->membutuhkan_keterangan_tambahan && 
+                               !$jenisDonasi->mengandung_dana_non_halal && 
+                               !$jenisDonasi->apakah_barang;
+                    }),
+                
+                Select::make('kategori_dana_non_halal_id')
+                    ->label('Kategori Dana Non Halal')
+                    ->options(function () {
+                        return \App\Models\KategoriDanaNonHalal::aktif()
+                            ->urutan()
+                            ->pluck('nama', 'id');
+                    })
+                    ->searchable()
+                    ->preload()
+                    ->visible(function (Get $get) {
+                        $jenisDonasiId = $get('jenis_donasi_id');
+                        if (!$jenisDonasiId) return false;
+                        $jenisDonasi = JenisDonasi::find($jenisDonasiId);
+                        return $jenisDonasi && $jenisDonasi->mengandung_dana_non_halal && !$jenisDonasi->apakah_barang;
                     }),
                 
                 Textarea::make('deskripsi_barang')

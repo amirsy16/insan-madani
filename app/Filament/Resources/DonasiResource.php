@@ -8,6 +8,7 @@ use App\Filament\Resources\DonasiResource\Widgets\DonasiStat;
 use App\Models\Donasi;
 use App\Models\JenisDonasi;
 use App\Models\KategoriInfaqTerikat;
+use App\Models\KategoriDanaNonHalal;
 use App\Models\Donatur; // Pastikan model Donatur diimpor jika digunakan di URL
 use App\Models\Regency;
 use App\Models\District;
@@ -261,7 +262,27 @@ class DonasiResource extends Resource
                             $jenisDonasiId = $get('jenis_donasi_id');
                             if (!$jenisDonasiId) return false;
                             $jenisDonasi = JenisDonasi::find($jenisDonasiId);
-                            return $jenisDonasi && $jenisDonasi->membutuhkan_keterangan_tambahan && !$jenisDonasi->apakah_barang;
+                            return $jenisDonasi && 
+                                   $jenisDonasi->membutuhkan_keterangan_tambahan && 
+                                   !$jenisDonasi->mengandung_dana_non_halal && 
+                                   !$jenisDonasi->apakah_barang;
+                        })
+                        ->columnSpanFull(),
+                    
+                    Select::make('kategori_dana_non_halal_id')
+                        ->label('Kategori Dana Non Halal')
+                        ->options(function () {
+                            return \App\Models\KategoriDanaNonHalal::aktif()
+                                ->urutan()
+                                ->pluck('nama', 'id');
+                        })
+                        ->searchable()
+                        ->preload()
+                        ->visible(function (Get $get) {
+                            $jenisDonasiId = $get('jenis_donasi_id');
+                            if (!$jenisDonasiId) return false;
+                            $jenisDonasi = JenisDonasi::find($jenisDonasiId);
+                            return $jenisDonasi && $jenisDonasi->mengandung_dana_non_halal && !$jenisDonasi->apakah_barang;
                         })
                         ->columnSpanFull(),
                     
@@ -457,13 +478,22 @@ class DonasiResource extends Resource
                         if ($record->atas_nama_hamba_allah) {
                             return 'Hamba Allah';
                         }
-                        return $record->donatur?->nama ?? '-';
+                        if ($record->donatur) {
+                            // Menambahkan prefix Bpk./Ibu berdasarkan jenis kelamin
+                            $prefix = $record->donatur->gender === 'male' ? 'Bpk.' : 'Ibu';
+                            return $prefix . ' ' . $record->donatur->nama;
+                        }
+                        return '-';
                     })
                     ->tooltip(function (Donasi $record): ?string {
                         if ($record->atas_nama_hamba_allah) {
                             return 'Donasi Anonim - Hamba Allah';
                         }
-                        return $record->donatur?->nama;
+                        if ($record->donatur) {
+                            $prefix = $record->donatur->gender === 'male' ? 'Bapak' : 'Ibu';
+                            return $prefix . ' ' . $record->donatur->nama;
+                        }
+                        return null;
                     })
                     ->url(fn (Donasi $record) => $record->donatur && !$record->atas_nama_hamba_allah ? 
                         DonaturResource::getUrl('view', ['record' => $record->donatur_id]) : null)
@@ -561,6 +591,12 @@ class DonasiResource extends Resource
                     ->tooltip(fn (Donasi $record): ?string => $record->keterangan_infak_khusus)
                     ->toggleable(isToggledHiddenByDefault: true),
                 
+                TextColumn::make('kategoriDanaNonHalal.nama')
+                    ->label('Kategori Dana Non Halal')
+                    ->limit(25)
+                    ->tooltip(fn (Donasi $record): ?string => $record->kategoriDanaNonHalal?->nama)
+                    ->toggleable(isToggledHiddenByDefault: true),
+                
                 TextColumn::make('deskripsi_barang')
                     ->label('Deskripsi Barang')
                     ->limit(25)
@@ -619,6 +655,21 @@ class DonasiResource extends Resource
                         ->searchable()
                         ->preload()
                         ->label('Fundraiser'),
+                
+                SelectFilter::make('donatur.gender')
+                    ->label('Jenis Kelamin Donatur')
+                    ->options([
+                        'male' => 'Laki-laki',
+                        'female' => 'Perempuan',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $gender): Builder => $query->whereHas('donatur', 
+                                fn (Builder $query) => $query->where('gender', $gender)
+                            )
+                        );
+                    }),
             
                 Tables\Filters\TernaryFilter::make('atas_nama_hamba_allah')
                     ->label('Donasi Anonim')
@@ -708,7 +759,7 @@ class DonasiResource extends Resource
                 ImportAction::make()
                     ->importer(DonasiImporter::class),
             ])
-            ->defaultSort('tanggal_donasi', 'desc');
+            ->defaultSort('created_at', 'desc');
     }
 
     /**

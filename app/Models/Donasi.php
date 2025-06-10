@@ -9,7 +9,7 @@ class Donasi extends Model {
     use HasFactory;
     protected $fillable = [
         'donatur_id', 'jenis_donasi_id', 'metode_pembayaran_id', 'fundraiser_id',
-        'jumlah', 'keterangan_infak_khusus', 'deskripsi_barang', 'perkiraan_nilai_barang',
+        'jumlah', 'keterangan_infak_khusus', 'kategori_dana_non_halal_id', 'deskripsi_barang', 'perkiraan_nilai_barang',
         'bukti_pembayaran', 'catatan_donatur', 'tanggal_donasi', 'atas_nama_hamba_allah', 'nomor_transaksi_unik',
         'status_konfirmasi', 'dikonfirmasi_oleh_user_id', 'dikonfirmasi_pada', 'catatan_konfirmasi',
         'dicatat_oleh_user_id',
@@ -25,6 +25,7 @@ class Donasi extends Model {
     public function jenisDonasi(): BelongsTo { return $this->belongsTo(JenisDonasi::class, 'jenis_donasi_id'); }
     public function metodePembayaran(): BelongsTo { return $this->belongsTo(MetodePembayaran::class, 'metode_pembayaran_id'); }
     public function fundraiser(): BelongsTo { return $this->belongsTo(Fundraiser::class, 'fundraiser_id'); }
+    public function kategoriDanaNonHalal(): BelongsTo { return $this->belongsTo(KategoriDanaNonHalal::class, 'kategori_dana_non_halal_id'); }
     public function dikonfirmasiOleh(): BelongsTo { return $this->belongsTo(User::class, 'dikonfirmasi_oleh_user_id'); }
     public function dicatatOleh(): BelongsTo { return $this->belongsTo(User::class, 'dicatat_oleh_user_id'); }
     public function invoices(): HasMany { return $this->hasMany(InvoiceDonasi::class); }
@@ -49,5 +50,13 @@ class Donasi extends Model {
     public function successfulInvoices(): HasMany
     {
         return $this->invoices()->whereIn('delivery_status', ['sent', 'delivered']);
+    }
+
+    /**
+     * Get total nilai donasi (cash + barang)
+     */
+    public function getTotalNilaiAttribute(): float
+    {
+        return ($this->jumlah ?? 0) + ($this->perkiraan_nilai_barang ?? 0);
     }
 }

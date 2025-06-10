@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL;
 use Filament\Support\Assets\Js;
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
@@ -24,5 +25,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         
+        if(config('app.env') === 'local')
+        {
+            URL::forceScheme('https');
+        }
     }
 }

@@ -286,9 +286,9 @@
                 <tr>
                     <td>nomor_hp</td>
                     <td>Tidak</td>
-                    <td>628xxxxxxxxx</td>
-                    <td>6281234567890</td>
-                    <td>Format internasional tanpa +</td>
+                    <td>8xxxxxxxxx</td>
+                    <td>81234567890</td>
+                    <td>Format nomor HP tanpa awalan</td>
                 </tr>
                 <tr>
                     <td>email</td>
@@ -324,9 +324,9 @@
         <h4>📝 Contoh Template CSV Donatur:</h4>
         <div class="code">
 nama,gender,nomor_hp,email,alamat,pekerjaan,aktif
-Ahmad Budi Santoso,male,6281234567890,ahmad.budi@gmail.com,"Jl. Merdeka No. 123, RT 02/RW 05",Pegawai Swasta,true
-Siti Nurhaliza,female,6287654321098,siti.nur@yahoo.com,"Jl. Sudirman No. 456, RT 01/RW 03",Ibu Rumah Tangga,true
-Muhammad Rizki,male,6285555444333,rizki.m@outlook.com,"Jl. Gatot Subroto No. 789",Wiraswasta,true
+Ahmad Budi Santoso,male,81234567890,ahmad.budi@gmail.com,"Jl. Merdeka No. 123, RT 02/RW 05",Pegawai Swasta,true
+Siti Nurhaliza,female,87654321098,siti.nur@yahoo.com,"Jl. Sudirman No. 456, RT 01/RW 03",Ibu Rumah Tangga,true
+Muhammad Rizki,male,85555444333,rizki.m@outlook.com,"Jl. Gatot Subroto No. 789",Wiraswasta,true
         </div>
 
         <div class="step">
@@ -366,9 +366,9 @@ Muhammad Rizki,male,6285555444333,rizki.m@outlook.com,"Jl. Gatot Subroto No. 789
                 <tr>
                     <td>nomor_hp</td>
                     <td>Tidak</td>
-                    <td>628xxxxxxxxx</td>
-                    <td>6281234567890</td>
-                    <td>Format internasional tanpa +</td>
+                    <td>8xxxxxxxxx</td>
+                    <td>81234567890</td>
+                    <td>Format nomor HP tanpa awalan</td>
                 </tr>
                 <tr>
                     <td>aktif</td>
@@ -383,9 +383,9 @@ Muhammad Rizki,male,6285555444333,rizki.m@outlook.com,"Jl. Gatot Subroto No. 789
         <h4>📝 Contoh Template CSV Fundraiser:</h4>
         <div class="code">
 nama_fundraiser,nomor_hp,aktif
-Ahmad Fundraiser,6281234567890,true
-Budi Pengumpul,6287654321098,true
-Siti Koordinator,6285555444333,false
+Ahmad Fundraiser,81234567890,true
+Budi Pengumpul,87654321098,true
+Siti Koordinator,85555444333,false
         </div>
 
         <div class="step">
@@ -487,7 +487,7 @@ Siti Koordinator,6285555444333,false
         <div class="code">
 donatur,jenisDonasi,metodePembayaran,jumlah,tanggal_donasi
 DN25001,Zakat Maal,Transfer Bank,500000,2025-06-15
-6281234567890,Infaq Tidak Terikat,QRIS,100000,2025-06-15
+81234567890,Infaq Tidak Terikat,QRIS,100000,2025-06-15
 ahmad.budi@gmail.com,Sedekah,Tunai,50000,2025-06-14
 DN25002,Zakat Fitrah,GoPay,25000,2025-06-13
         </div>
@@ -520,10 +520,10 @@ DN25002,Zakat Fitrah,GoPay,25000,2025-06-13
 
         <h4>2. Format Nomor HP Salah</h4>
         <div class="example-bad">
-            <strong>❌ Salah:</strong> 081234567890, +6281234567890, 08123-456-7890
+            <strong>❌ Salah:</strong> 081234567890, +6281234567890, 08123-456-7890, 6281234567890
         </div>
         <div class="example-good">
-            <strong>✅ Benar:</strong> 6281234567890
+            <strong>✅ Benar:</strong> 81234567890
         </div>
 
         <h4>3. Nama Jenis Donasi Tidak Sesuai</h4>
@@ -574,7 +574,7 @@ DN25002,Zakat Fitrah,GoPay,25000,2025-06-13
             <ul>
                 <li>☑️ Semua kolom wajib sudah terisi</li>
                 <li>☑️ Format tanggal: YYYY-MM-DD</li>
-                <li>☑️ Format nomor HP: 628xxxxxxxxx</li>
+                <li>☑️ Format nomor HP: 8xxxxxxxxx</li>
                 <li>☑️ Email format valid (ada @ dan domain)</li>
                 <li>☑️ Jenis donasi sesuai master data</li>
                 <li>☑️ Metode pembayaran sesuai master data</li>

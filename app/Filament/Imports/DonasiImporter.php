@@ -6,6 +6,8 @@ use App\Models\Donasi;
 use App\Models\Donatur;
 use App\Models\JenisDonasi;
 use App\Models\MetodePembayaran;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Filament\Actions\Imports\ImportColumn;
 use Filament\Actions\Imports\Importer;
 use Filament\Actions\Imports\Models\Import;
@@ -54,7 +56,7 @@ class DonasiImporter extends Importer
             'nomor_transaksi_unik' => $nomorTransaksi,        ], [
             // Default values untuk record baru
             'atas_nama_hamba_allah' => false,
-            'dicatat_oleh_user_id' => auth()->user()?->id,
+            'dicatat_oleh_user_id' => Auth::id(),
         ]);
 
         // Resolve donatur berdasarkan identifier

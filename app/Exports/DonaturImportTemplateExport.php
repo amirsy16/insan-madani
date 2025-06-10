@@ -24,7 +24,7 @@ class DonaturImportTemplateExport implements FromCollection, WithHeadings, Shoul
                 'Dago',  // village
                 'Jl. Contoh No. 123 RT 01 RW 02',  // alamat_detail
                 'Jl. Contoh No. 123 RT 01 RW 02, Dago, Coblong, Bandung, Jawa Barat',  // alamat_lengkap
-                '081234567890',  // nomor_hp
+                '81234567890',  // nomor_hp
                 'ahmad@contoh.com',  // email
                 'Karyawan Swasta',  // pekerjaan
             ],
@@ -39,7 +39,7 @@ class DonaturImportTemplateExport implements FromCollection, WithHeadings, Shoul
                 'Bendungan Hilir',  // village
                 'Jl. Sudirman No. 456 RT 03 RW 05',  // alamat_detail
                 'Jl. Sudirman No. 456 RT 03 RW 05, Bendungan Hilir, Tanah Abang, Jakarta Pusat, DKI Jakarta',  // alamat_lengkap
-                '081987654321',  // nomor_hp
+                '81987654321',  // nomor_hp
                 'siti@contoh.com',  // email
                 'Ibu Rumah Tangga',  // pekerjaan
             ]

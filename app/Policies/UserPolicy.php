@@ -141,4 +141,34 @@ class UserPolicy
     {
         return $user->can('reorder_user');
     }
+
+    /**
+     * Determine whether the user can send password reset email.
+     *
+     * @param  \App\Models\User  $user
+     * @param  \App\Models\User  $model
+     * @return bool
+     */
+    public function sendPasswordReset(User $user, User $model): bool
+    {
+        // Super admin can send password reset email to any user except themselves
+        return $user->hasRole('super_admin') && $user->id !== $model->id;
+    }
+
+    /**
+     * Determine whether the user can edit name/email of other users.
+     *
+     * @param  \App\Models\User  $user
+     * @param  \App\Models\User  $model
+     * @return bool
+     */
+    public function updatePersonalInfo(User $user, User $model): bool
+    {
+        // Super admin cannot edit name/email of other users
+        // Only regular update permission applies for non-super-admin
+        if ($user->hasRole('super_admin') && $user->id !== $model->id) {
+            return false;
+        }
+        return $user->can('update_user');
+    }
 }

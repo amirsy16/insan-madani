@@ -29,7 +29,7 @@ class DonaturImporter extends Importer
             ImportColumn::make('email')
                 ->rules(['nullable', 'email', 'max:255'])
                 ->example('ahmad.budi@gmail.com'),
-            ImportColumn::make('alamat')
+            ImportColumn::make('alamat_detail')
                 ->rules(['nullable'])
                 ->example('Jl. Merdeka No. 123, RT 02/RW 05'),
             ImportColumn::make('pekerjaan_id')

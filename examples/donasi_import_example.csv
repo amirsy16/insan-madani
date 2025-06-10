@@ -1,4 +1,4 @@
 donatur_identifier,atas_nama_hamba_allah,jenis_donasi_id,metode_pembayaran_id,fundraiser_identifier,jumlah,keterangan_infak_khusus,infaq_terikat_option_id,deskripsi_barang,perkiraan_nilai_barang,bukti_pembayaran,catatan_donatur,tanggal_donasi,nomor_transaksi_unik,status_konfirmasi,catatan_konfirmasi
 DN001,false,Zakat Fitrah,Transfer Bank,Ahmad Fundraiser,50000,,,,,,Semoga bermanfaat,2025-06-08,TRX001,terkonfirmasi,Donasi telah dikonfirmasi
-081987654321,false,Infaq Umum,QRIS,,100000,Untuk yatim piatu,,,,,Mudah-mudahan berkah,2025-06-07,TRX002,pending,
+81987654321,false,Infaq Umum,QRIS,,100000,Untuk yatim piatu,,,,,Mudah-mudahan berkah,2025-06-07,TRX002,pending,
 ,true,Sedekah,Cash,,25000,,,,,,Atas nama hamba Allah,2025-06-06,TRX003,terkonfirmasi,Donasi anonim diterima

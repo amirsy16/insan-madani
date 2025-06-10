@@ -264,7 +264,8 @@ class DonaturResource extends Resource
             ->headerActions([
                 ImportAction::make()
                     ->importer(DonaturImporter::class)
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function getRelations(): array

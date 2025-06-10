@@ -12,7 +12,11 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Validation\Rules\Password as PasswordRule;
+use Filament\Tables\Actions\Action;
+use Filament\Notifications\Notification;
 
 class UserResource extends Resource
 {
@@ -45,7 +49,9 @@ class UserResource extends Resource
                             ->label('Nama Lengkap')
                             ->required()
                             ->maxLength(255)
-                            ->placeholder('Masukkan nama lengkap pengguna'),
+                            ->placeholder('Masukkan nama lengkap pengguna')
+                            ->readOnly(false) // Disable read-only for now
+                            ->helperText('Nama lengkap pengguna'),
                             
                         Forms\Components\TextInput::make('email')
                             ->label('Email')
@@ -54,6 +60,7 @@ class UserResource extends Resource
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
                             ->placeholder('contoh@email.com')
+                            ->readOnly(false) // Disable read-only for now
                             ->helperText('Email ini akan digunakan untuk login'),
                     ]),
                 
@@ -69,10 +76,11 @@ class UserResource extends Resource
                             ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
                             ->dehydrated(fn ($state) => filled($state))
                             ->required(fn ($record) => ! $record)
-                            ->rule(Password::default())
+                            ->rule(PasswordRule::default())
                             ->autocomplete('new-password')
                             ->hiddenOn('view')
                             ->placeholder(fn ($record) => $record ? '••••••••' : 'Masukkan kata sandi')
+                            ->visible(true) // Show for all users for now
                             ->helperText(fn ($record) => $record 
                                 ? 'Biarkan kosong jika tidak ingin mengubah kata sandi' 
                                 : 'Minimal 8 karakter'),
@@ -83,7 +91,8 @@ class UserResource extends Resource
                             ->required(fn ($record) => ! $record)
                             ->dehydrated(false)
                             ->placeholder('Konfirmasi kata sandi')
-                            ->hiddenOn(['view', 'edit']),
+                            ->hiddenOn(['view', 'edit'])
+                            ->visible(true), // Show for all users for now
                     ]),
                 
                 // Permissions Section
@@ -166,6 +175,42 @@ class UserResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                
+                // Send Password Reset Email Action for Super Admin
+                Action::make('sendPasswordReset')
+                    ->label('Kirim Tautan Reset')
+                    ->icon('heroicon-o-envelope')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Kirim Tautan Reset Password')
+                    ->modalDescription(fn (User $record) => 
+                        "Apakah Anda yakin ingin mengirim tautan reset password ke email '{$record->email}'? " .
+                        "Pengguna akan menerima email berisi tautan aman untuk mereset password mereka."
+                    )
+                    ->modalSubmitActionLabel('Ya, Kirim Email')
+                    ->action(function (User $record) {
+                        // Send password reset email using Laravel's built-in system
+                        $status = Password::sendResetLink(['email' => $record->email]);
+                        
+                        if ($status === Password::RESET_LINK_SENT) {
+                            Notification::make()
+                                ->title('Email reset password berhasil dikirim')
+                                ->body("Tautan reset password telah dikirim ke {$record->email}. Pengguna dapat menggunakan tautan tersebut untuk mengatur password baru.")
+                                ->success()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Gagal mengirim email')
+                                ->body('Terjadi kesalahan saat mengirim email reset password. Silakan coba lagi.')
+                                ->danger()
+                                ->send();
+                        }
+                    })
+                    ->visible(function (User $record) {
+                        // Show reset button for all users except current user
+                        return Auth::id() !== $record->id;
+                    }),
+                    
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

@@ -67,4 +67,11 @@ return [
         ],
     ],
 
+    // WatZap API Configuration
+    'watzap' => [
+        'api_key' => env('WATZAP_API_KEY', 'ILOZ2ZNXJIQILIAX'),
+        'number_key' => env('WATZAP_NUMBER_KEY', 'GL9jBTuExuUDzncU'),
+        'base_url' => env('WATZAP_BASE_URL', 'https://api.watzap.id/v1'),
+    ],
+
 ];

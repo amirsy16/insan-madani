@@ -20,6 +20,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Jeffgreco13\FilamentBreezy\BreezyCore;
 use Filament\Pages\Page;
 use Leandrocfe\FilamentApexCharts\FilamentApexChartsPlugin;
 class AdminPanelProvider extends PanelProvider
@@ -31,6 +32,8 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->passwordReset()
+            ->emailVerification()
             ->topNavigation()
             ->brandLogo(asset('images/LOGOIM.jpg'))
             ->brandLogoHeight('4rem')
@@ -72,7 +75,7 @@ class AdminPanelProvider extends PanelProvider
                     ->gridColumns([
                         'default' => 1,
                         'sm' => 2,
-                        'lg' => 3
+                        'lg' => 3,
                     ])
                     ->sectionColumnSpan(1)
                     ->checkboxListColumns([
@@ -84,6 +87,18 @@ class AdminPanelProvider extends PanelProvider
                         'default' => 1,
                         'sm' => 2,
                     ]),
+                BreezyCore::make()
+                    ->myProfile(
+                        shouldRegisterUserMenu: true,
+                        userMenuLabel: 'Profil Saya',
+                        shouldRegisterNavigation: false,
+                        navigationGroup: 'Pengaturan',
+                        hasAvatars: false, // Disable avatar upload
+                        slug: 'my-profile'
+                    )
+                    ->enableTwoFactorAuthentication(
+                        force: false, // Set to true if you want to force all users to enable 2FA
+                    ),
             ])
             ->authMiddleware([
                 Authenticate::class,

@@ -267,9 +267,9 @@
                 <tr>
                     <td>nomor_hp</td>
                     <td>Tidak</td>
-                    <td>628xxxxxxxxx</td>
-                    <td>6281234567890</td>
-                    <td>Format internasional tanpa +</td>
+                    <td>8xxxxxxxxx</td>
+                    <td>81234567890</td>
+                    <td>Format nomor HP tanpa awalan</td>
                 </tr>
                 <tr>
                     <td>email</td>
@@ -311,7 +311,7 @@
                 <tr>
                     <td>Ahmad Budi Santoso</td>
                     <td>male</td>
-                    <td>6281234567890</td>
+                    <td>81234567890</td>
                     <td>ahmad.budi@gmail.com</td>
                     <td>Jl. Merdeka No. 123, RT 02/RW 05</td>
                     <td>Karyawan Swasta</td>
@@ -319,7 +319,7 @@
                 <tr>
                     <td>Siti Nurhaliza</td>
                     <td>female</td>
-                    <td>6287654321098</td>
+                    <td>87654321098</td>
                     <td>siti.nur@yahoo.com</td>
                     <td>Jl. Sudirman No. 456, RT 01/RW 03</td>
                     <td>Mengurus Rumah Tangga</td>
@@ -327,7 +327,7 @@
                 <tr>
                     <td>Muhammad Rizki</td>
                     <td>male</td>
-                    <td>6285555444333</td>
+                    <td>85555444333</td>
                     <td>rizki.m@outlook.com</td>
                     <td>Jl. Gatot Subroto No. 789</td>
                     <td>Wiraswasta</td>
@@ -353,7 +353,7 @@
             <ul>
                 <li><strong>Kolom "nama":</strong> Wajib diisi, minimal 3 karakter</li>
                 <li><strong>Kolom "gender":</strong> Hanya boleh "male" atau "female" (huruf kecil)</li>
-                <li><strong>Kolom "nomor_hp":</strong> Format 628xxxxxxxxx (dimulai 628, tanpa +62)</li>
+                <li><strong>Kolom "nomor_hp":</strong> Format 8xxxxxxxxx (dimulai 8, tanpa prefix 62 atau 0)</li>
                 <li><strong>Kolom "email":</strong> Harus format email valid dengan @ dan domain</li>
                 <li><strong>Kolom "pekerjaan_id":</strong> Harus sesuai dengan master data pekerjaan yang tersedia</li>
             </ul>
@@ -382,8 +382,8 @@
             
             <h5><strong>3. Kolom "nomor_hp" (OPSIONAL)</strong></h5>
             <ul>
-                <li>Format: <code>628xxxxxxxxx</code> (dimulai 628, tanpa +62)</li>
-                <li>Contoh: 6281234567890, 6287654321098</li>
+                <li>Format: <code>8xxxxxxxxx</code> (dimulai 8, tanpa prefix 62 atau 0)</li>
+                <li>Contoh: 81234567890, 87654321098</li>
                 <li>Jika tidak ada, kosongkan saja</li>
             </ul>
             
@@ -435,9 +435,9 @@
                 <tr>
                     <td>nomor_hp</td>
                     <td>Tidak</td>
-                    <td>628xxxxxxxxx</td>
-                    <td>6281234567890</td>
-                    <td>Format internasional tanpa +</td>
+                    <td>8xxxxxxxxx</td>
+                    <td>81234567890</td>
+                    <td>Format nomor HP tanpa awalan</td>
                 </tr>
                 <tr>
                     <td>aktif</td>
@@ -461,17 +461,17 @@
             <tbody>
                 <tr>
                     <td>Ahmad Fundraiser</td>
-                    <td>6281234567890</td>
+                    <td>81234567890</td>
                     <td>true</td>
                 </tr>
                 <tr>
                     <td>Budi Pengumpul</td>
-                    <td>6287654321098</td>
+                    <td>87654321098</td>
                     <td>true</td>
                 </tr>
                 <tr>
                     <td>Siti Koordinator</td>
-                    <td>6285555444333</td>
+                    <td>85555444333</td>
                     <td>false</td>
                 </tr>
             </tbody>
@@ -484,7 +484,7 @@
                 <li><strong>Download template kosong:</strong> Dapatkan file template_import_fundraiser.csv</li>
                 <li><strong>Buka dengan aplikasi spreadsheet:</strong> Pastikan dapat melihat 3 kolom header</li>
                 <li><strong>Isi data fundraiser:</strong> Mulai dari baris kedua setelah header</li>
-                <li><strong>Periksa nomor HP:</strong> Pastikan format 628xxxxxxxxx</li>
+                <li><strong>Periksa nomor HP:</strong> Pastikan format 8xxxxxxxxx</li>
                 <li><strong>Set status aktif:</strong> Gunakan "true" untuk aktif, "false" untuk non-aktif</li>
                 <li><strong>Simpan sebagai CSV UTF-8:</strong> Pastikan encoding benar</li>
             </ol>
@@ -618,7 +618,7 @@
                     <td>2025-06-15</td>
                 </tr>
                 <tr>
-                    <td>6281234567890</td>
+                    <td>81234567890</td>
                     <td>Infaq Tidak Terikat</td>
                     <td>QRIS (Umum)</td>
                     <td>100000</td>
@@ -670,10 +670,10 @@
 
         <h4>2. Format Nomor HP Salah</h4>
         <div class="example-bad">
-            <strong>❌ Salah:</strong> 081234567890, +6281234567890, 08123-456-7890
+            <strong>❌ Salah:</strong> 081234567890, +6281234567890, 08123-456-7890, 6281234567890
         </div>
         <div class="example-good">
-            <strong>✅ Benar:</strong> 6281234567890
+            <strong>✅ Benar:</strong> 81234567890
         </div>
 
         <h4>3. Nama Jenis Donasi Tidak Sesuai</h4>
@@ -724,7 +724,7 @@
             <ul>
                 <li>☑️ Semua kolom wajib sudah terisi</li>
                 <li>☑️ Format tanggal: YYYY-MM-DD</li>
-                <li>☑️ Format nomor HP: 628xxxxxxxxx</li>
+                <li>☑️ Format nomor HP: 8xxxxxxxxx</li>
                 <li>☑️ Email format valid (ada @ dan domain)</li>
                 <li>☑️ Jenis donasi sesuai master data</li>
                 <li>☑️ Metode pembayaran sesuai master data</li>
