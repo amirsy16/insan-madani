@@ -1,0 +1,805 @@
+<?php
+
+namespace App\Filament\Imports;
+
+use App\Models\Donasi;
+use App\Models\Donatur;
+use App\Models\Fundraiser;
+use App\Models\JenisDonasi;
+use App\Models\KategoriInfaqTerikat;
+use App\Models\MetodePembayaran;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Filament\Actions\Imports\ImportColumn;
+use Filament\Actions\Imports\Importer;
+use Filament\Actions\Imports\Models\Import;
+use Carbon\Carbon;
+
+class DonasiImporter extends Importer
+{
+    protected static ?string $model = Donasi::class;    public static function getColumns(): array
+    {
+        return [
+            ImportColumn::make('nomor_transaksi')
+                ->label('No Transaksi')
+                ->rules(['nullable'])
+                ->example('03700'),            ImportColumn::make('tanggal_donasi')
+                ->requiredMapping()
+                ->rules(['required'])
+                ->label('Tanggal')
+                ->example('1/3/2025'),            ImportColumn::make('nama_donatur')
+                ->label('Nama Donatur')
+                ->rules(['required'])
+                ->example('Bapak Suhadi'),
+            ImportColumn::make('nomor_hp')
+                ->label('No HP')
+                ->rules(['nullable'])
+                ->example('81274755000'),
+            ImportColumn::make('alamat')
+                ->label('Alamat')
+                ->rules(['nullable'])
+                ->example('RT. 13 Tangkit'),            ImportColumn::make('jenis_donasi')
+                ->requiredMapping()
+                ->label('Jenis Donasi')
+                ->rules(['required'])
+                ->example('Infaq Terikat'),
+            ImportColumn::make('keterangan')
+                ->label('Keterangan')
+                ->rules(['nullable'])
+                ->example('IK ASRAMA YATIM'),
+            ImportColumn::make('catatan')
+                ->label('Catatan')
+                ->rules(['nullable'])
+                ->example('anak yatim'),            ImportColumn::make('via')
+                ->label('Via (Metode Pembayaran)')
+                ->example('Tunai'),ImportColumn::make('jumlah')
+                ->numeric()
+                ->rules(['nullable', 'numeric'])
+                ->example('100000'),
+            ImportColumn::make('deskripsi_barang')
+                ->label('Deskripsi Barang')
+                ->rules(['nullable'])
+                ->example('Beras 5kg premium'),
+            ImportColumn::make('perkiraan_nilai_barang')
+                ->label('Perkiraan Nilai Barang')
+                ->numeric()
+                ->rules(['nullable', 'numeric'])
+                ->example('70000'),            ImportColumn::make('fundraiser')
+                ->label('Fundraiser')
+                ->example('ZULI'),
+        ];
+    }    public function resolveRecord(): ?Donasi
+    {
+        // Generate nomor transaksi unik dari data atau generate baru
+        $nomorTransaksi = $this->data['nomor_transaksi'] ?? 'TRX' . strtoupper(uniqid());
+        
+        // Cari donasi berdasarkan nomor transaksi atau buat baru
+        $donasi = Donasi::firstOrNew([
+            'nomor_transaksi_unik' => $nomorTransaksi,
+        ], [
+            // Default values untuk record baru
+            'atas_nama_hamba_allah' => false,
+            'dicatat_oleh_user_id' => Auth::id(),
+        });
+
+        // Resolve atau create donatur berdasarkan nama dan data lainnya
+        if (isset($this->data['nama_donatur']) && $this->data['nama_donatur']) {
+            $donaturId = $this->resolveDonatur($this->data['nama_donatur'], $this->data['nomor_hp'] ?? null, $this->data['alamat'] ?? null);
+            if ($donaturId) {
+                $donasi->donatur_id = $donaturId;
+            }
+        }        // Resolve jenis donasi
+        if (isset($this->data['jenis_donasi']) && $this->data['jenis_donasi']) {
+            $jenisDonasi = $this->resolveJenisDonasi($this->data['jenis_donasi']);
+            if ($jenisDonasi) {
+                $donasi->jenis_donasi_id = $jenisDonasi->id;
+            }
+        }// Resolve metode pembayaran
+        if (isset($this->data['via']) && $this->data['via']) {
+            $metodePembayaranId = $this->resolveMetodePembayaran($this->data['via']);
+            if ($metodePembayaranId) {
+                $donasi->metode_pembayaran_id = $metodePembayaranId;
+            }
+        }
+
+        // Resolve fundraiser
+        if (isset($this->data['fundraiser']) && $this->data['fundraiser']) {
+            $fundraiserId = $this->resolveFundraiser($this->data['fundraiser']);
+            if ($fundraiserId) {
+                $donasi->fundraiser_id = $fundraiserId;
+            }
+        }        // Resolve keterangan berdasarkan jenis donasi dan format
+        if (isset($this->data['keterangan']) && $this->data['keterangan']) {
+            // Get jenis donasi untuk pengecekan
+            $jenisDonasi = null;
+            if (isset($this->data['jenis_donasi'])) {
+                $jenisDonasi = JenisDonasi::where('nama', 'like', '%' . $this->data['jenis_donasi'] . '%')->first();
+            }
+            
+            // Cek apakah jenis donasi membutuhkan keterangan tambahan
+            if ($jenisDonasi && 
+                $jenisDonasi->membutuhkan_keterangan_tambahan && 
+                !$jenisDonasi->mengandung_dana_non_halal && 
+                !$jenisDonasi->apakah_barang) {
+                
+                // Jenis donasi seperti Infaq Terikat, DSKL → gunakan keterangan_infak_khusus
+                $infaqTerikatKategori = $this->resolveInfaqTerikat($this->data['keterangan']);
+                if ($infaqTerikatKategori) {
+                    $donasi->keterangan_infak_khusus = $infaqTerikatKategori;
+                } else {
+                    // Fallback: simpan keterangan asli jika tidak ditemukan mapping
+                    $donasi->keterangan_infak_khusus = $this->data['keterangan'];
+                }
+            } else {
+                // Jenis donasi biasa → gunakan catatan_donatur
+                $donasi->catatan_donatur = $this->data['keterangan'];
+            }
+        }        // Set catatan donatur (terpisah dari keterangan)
+        if (isset($this->data['catatan']) && $this->data['catatan']) {
+            // Jika catatan_donatur sudah terisi dari keterangan, gabungkan
+            if ($donasi->catatan_donatur) {
+                $donasi->catatan_donatur .= "\n\nCatatan: " . $this->data['catatan'];
+            } else {
+                $donasi->catatan_donatur = $this->data['catatan'];
+            }
+        }
+
+        // Set field untuk donasi barang
+        if (isset($this->data['deskripsi_barang']) && $this->data['deskripsi_barang']) {
+            $donasi->deskripsi_barang = $this->data['deskripsi_barang'];
+        }
+
+        if (isset($this->data['perkiraan_nilai_barang']) && $this->data['perkiraan_nilai_barang']) {
+            $donasi->perkiraan_nilai_barang = $this->data['perkiraan_nilai_barang'];
+        }        // Set field untuk donasi uang
+        if (isset($this->data['jumlah']) && $this->data['jumlah']) {
+            $jumlahParsed = $this->parseJumlahUang($this->data['jumlah']);
+            if ($jumlahParsed > 0) {
+                $donasi->jumlah = $jumlahParsed;
+            }
+        }// Set tanggal donasi
+        if (isset($this->data['tanggal_donasi']) && $this->data['tanggal_donasi']) {
+            $tanggalParsed = $this->parseTanggal($this->data['tanggal_donasi']);
+            if ($tanggalParsed) {
+                $donasi->tanggal_donasi = $tanggalParsed;
+            }
+        }return $donasi;
+    }    private function resolveDonatur(string $nama, ?string $nomorHp = null, ?string $alamat = null): ?int
+    {
+        // Extract gender dan bersihkan nama
+        $genderInfo = $this->extractGenderFromName($nama);
+        $namaBersih = $genderInfo['nama_bersih'];
+        $gender = $genderInfo['gender'];
+        
+        // Coba cari berdasarkan nama bersih terlebih dahulu
+        $donatur = Donatur::where('nama', 'like', '%' . $namaBersih . '%')->first();
+        
+        if (!$donatur && $nomorHp) {
+            // Jika tidak ditemukan, coba berdasarkan nomor HP
+            $donatur = Donatur::where('nomor_hp', $nomorHp)->first();
+        }
+        
+        if (!$donatur) {
+            // Jika masih tidak ditemukan, buat donatur baru
+            $donatur = Donatur::create([
+                'nama' => $namaBersih, // Simpan nama tanpa prefix
+                'nomor_hp' => $nomorHp,
+                'alamat_detail' => $alamat,
+                'gender' => $gender,
+            ]);
+        }
+        
+        return $donatur?->id;
+    }    /**
+     * Extract gender dari nama dan bersihkan nama dari prefix
+     */
+    private function extractGenderFromName(string $namaLengkap): array
+    {
+        // Definisi prefix dan gender mapping
+        $prefixMapping = [
+            // Laki-laki (pasti)
+            'bapak' => 'male',
+            'bp' => 'male', 
+            'bpk' => 'male',
+            'pak' => 'male',
+            'h.' => 'male',  // Haji
+            'drs.' => 'male', // Drs
+            'ir.' => 'male', // Insinyur
+            'prof.' => 'male', // Professor
+            'sdr.' => 'male', // Saudara
+            
+            // Perempuan (pasti)
+            'ibu' => 'female',
+            'bu' => 'female',
+            'ibuk' => 'female',
+            'ny.' => 'female', // Nyonya
+            'nyonya' => 'female',
+            'hajjah' => 'female',
+            'drg.' => 'female', // Dokter gigi
+            'sdri.' => 'female', // Saudari
+            
+            // Netral (perlu deteksi lanjutan)
+            'ananda' => 'neutral',
+            'anak' => 'neutral',
+            'adik' => 'neutral',
+            'dr.' => 'neutral', // Dokter bisa male/female
+        ];
+        
+        $namaLower = strtolower(trim($namaLengkap));
+        $gender = 'male'; // Default gender
+        $namaBersih = $namaLengkap;
+        $prefixFound = null;
+        
+        // Cek setiap prefix
+        foreach ($prefixMapping as $prefix => $detectedGender) {
+            // Cek prefix di awal nama (dengan atau tanpa spasi setelahnya)
+            if (str_starts_with($namaLower, $prefix . ' ') || 
+                (str_starts_with($namaLower, $prefix) && strlen($namaLower) > strlen($prefix))) {
+                
+                $prefixFound = $prefix;
+                
+                // Bersihkan nama dari prefix
+                if (str_starts_with($namaLower, $prefix . ' ')) {
+                    // Ada spasi setelah prefix
+                    $namaBersih = trim(substr($namaLengkap, strlen($prefix) + 1));
+                } else {
+                    // Tidak ada spasi setelah prefix
+                    $namaBersih = trim(substr($namaLengkap, strlen($prefix)));
+                }
+                
+                // Set gender berdasarkan prefix
+                if ($detectedGender === 'neutral') {
+                    // Untuk prefix netral, deteksi berdasarkan nama
+                    $gender = $this->detectGenderFromName($namaBersih);
+                } else {
+                    $gender = $detectedGender;
+                }
+                
+                break; // Stop di prefix pertama yang cocok
+            }
+        }
+        
+        // Jika tidak ada prefix, coba deteksi dari nama langsung
+        if (!$prefixFound) {
+            $gender = $this->detectGenderFromName($namaLengkap);
+            $namaBersih = $namaLengkap;
+        }
+        
+        // Jika nama bersih kosong setelah pembersihan, gunakan nama asli
+        if (empty(trim($namaBersih))) {
+            $namaBersih = $namaLengkap;
+        }
+        
+        // Kapitalisasi nama bersih
+        $namaBersih = $this->capitalizeName($namaBersih);
+        
+        return [
+            'nama_bersih' => $namaBersih,
+            'gender' => $gender,
+            'prefix_detected' => $prefixFound ? true : false,
+            'prefix_type' => $prefixFound ? ($prefixMapping[$prefixFound] === 'neutral' ? 'neutral' : 'definite') : 'none'
+        ];
+    }
+    
+    /**
+     * Deteksi gender berdasarkan pola nama Indonesia
+     */
+    private function detectGenderFromName(string $nama): string
+    {
+        $namaLower = strtolower(trim($nama));
+        
+        // Nama yang biasanya perempuan (akhiran)
+        $femalePatterns = [
+            // Akhiran yang sering untuk perempuan
+            'ati$', 'ani$', 'eni$', 'ini$', 'oni$', 'uni$',
+            'sari$', 'wati$', 'yanti$', 'ningsih$', 'ning$',
+            'tini$', 'tuti$', 'yuni$', 'yani$', 'yati$',
+            'lia$', 'nia$', 'ria$', 'tia$', 'via$',
+            'eka$', 'ika$', 'oka$', 'uka$',
+            'ita$', 'uta$', 'eta$',
+            'ayu$', 'ayu\s', 'dewi$', 'dewi\s',
+            'sinta$', 'fitri$', 'putri$', 'indri$',
+            
+            // Nama awalan yang sering untuk perempuan
+            '^siti\s', '^sri\s', '^nur\s', '^nurul\s',
+            '^ratna\s', '^rina\s', '^rini\s', '^ratu\s',
+            '^dian\s', '^dina\s', '^lita\s', '^rita\s',
+            '^maya\s', '^mira\s', '^mega\s',
+        ];
+        
+        // Nama yang biasanya laki-laki (akhiran)
+        $malePatterns = [
+            // Akhiran yang sering untuk laki-laki  
+            'man$', 'wan$', 'din$', 'min$', 'kin$', 'ton$',
+            'budi$', 'adi$', 'ardi$', 'andi$', 'endi$',
+            'agus$', 'bagus$', 'ragus$',
+            'hadi$', 'fendi$', 'hendri$', 'hendro$',
+            'yanto$', 'santo$', 'tanto$', 'panto$',
+            'joko$', 'toko$', 'bambang$', 'gemilang$',
+            
+            // Nama awalan yang sering untuk laki-laki
+            '^ahmad\s', '^muhammad\s', '^muhamad\s', '^abdul\s',
+            '^agus\s', '^budi\s', '^eko\s', '^hendra\s',
+            '^joko\s', '^bambang\s', '^sugi\s', '^slamet\s',
+            '^wawan\s', '^dedi\s', '^rudi\s', '^andi\s',
+        ];
+        
+        // Cek pola perempuan
+        foreach ($femalePatterns as $pattern) {
+            if (preg_match('/' . $pattern . '/i', $namaLower)) {
+                return 'female';
+            }
+        }
+        
+        // Cek pola laki-laki
+        foreach ($malePatterns as $pattern) {
+            if (preg_match('/' . $pattern . '/i', $namaLower)) {
+                return 'male';
+            }
+        }
+        
+        // Default jika tidak cocok pola manapun
+        return 'male';
+    }
+    
+    /**
+     * Kapitalisasi nama dengan benar
+     */
+    private function capitalizeName(string $nama): string
+    {
+        // Split berdasarkan spasi dan kapitalisasi setiap kata
+        $words = explode(' ', $nama);
+        $capitalizedWords = [];
+        
+        foreach ($words as $word) {
+            if (!empty(trim($word))) {
+                $capitalizedWords[] = ucfirst(strtolower(trim($word)));
+            }
+        }
+        
+        return implode(' ', $capitalizedWords);
+    }    private function resolveFundraiser(string $identifier): ?int
+    {
+        // Coba cari berdasarkan nama fundraiser
+        $fundraiser = Fundraiser::where('nama_fundraiser', 'like', '%' . $identifier . '%')
+                                ->where('aktif', true)
+                                ->first();
+        
+        if (!$fundraiser) {
+            // Jika tidak ditemukan, coba berdasarkan nomor identitas
+            $fundraiser = Fundraiser::where('nomor_identitas', $identifier)
+                                   ->where('aktif', true)
+                                   ->first();
+        }
+        
+        if (!$fundraiser) {
+            // Jika tidak ditemukan, coba berdasarkan nomor HP
+            $fundraiser = Fundraiser::where('nomor_hp', $identifier)
+                                   ->where('aktif', true)
+                                   ->first();
+        }
+        
+        if (!$fundraiser) {
+            // Jika masih tidak ditemukan, buat fundraiser baru
+            $fundraiser = Fundraiser::create([
+                'nama_fundraiser' => $this->capitalizeName($identifier),
+                'aktif' => true,
+                'nomor_identitas' => null, // Bisa diisi manual nanti
+                'nomor_hp' => null, // Bisa diisi manual nanti
+                'alamat' => 'Auto-created from import',
+                'user_id' => null, // Tidak terhubung dengan user tertentu
+            ]);
+        }
+        
+        return $fundraiser?->id;
+    }private function resolveInfaqTerikat(string $keterangan): ?string
+    {
+        // Gunakan database query langsung untuk kategori_infaq_terikats
+        $infaqTerikat = DB::table('kategori_infaq_terikats')
+                          ->where('nama_kategori', 'like', '%' . $keterangan . '%')
+                          ->where('aktif', true)
+                          ->first();
+        
+        if (!$infaqTerikat) {
+            // Extract bagian setelah kode untuk pencarian
+            if (preg_match('/^[A-Z]{1,3}\s+(.+)/', $keterangan, $matches)) {
+                $deskripsi = $matches[1];
+                $infaqTerikat = DB::table('kategori_infaq_terikats')
+                              ->where('nama_kategori', 'like', '%' . $deskripsi . '%')
+                              ->where('aktif', true)
+                              ->first();
+            }
+        }
+        
+        if (!$infaqTerikat) {
+            // Pencarian berdasarkan deskripsi
+            $infaqTerikat = DB::table('kategori_infaq_terikats')
+                          ->where('deskripsi', 'like', '%' . $keterangan . '%')
+                          ->where('aktif', true)
+                          ->first();
+        }
+        
+        return $infaqTerikat?->nama_kategori;
+    }
+
+    private function resolveInfaqTerikatByCode(string $keterangan): ?string
+    {
+        // Extract kode dari format "IK ASRAMA YATIM" -> "IK"
+        if (preg_match('/^([A-Z]{1,3})\s/', $keterangan, $matches)) {
+            $kode = $matches[1];
+            $infaqTerikat = DB::table('kategori_infaq_terikats')
+                          ->where('nama_kategori', 'like', $kode . '%')
+                          ->where('aktif', true)
+                          ->first();
+            return $infaqTerikat?->nama_kategori;
+        }
+        
+        return null;
+    }
+
+    /**     * Contoh penggunaan untuk berbagai jenis donasi:
+     * 
+     * 1. INFAQ TERIKAT (membutuhkan_keterangan_tambahan = true)
+     *    - Jenis Donasi: "Infaq Terikat"
+     *    - Keterangan: "IK Asrama Yatim" → disimpan ke keterangan_infak_khusus
+     *    - Catatan: "Mohon didoakan" → disimpan ke catatan_donatur
+     *    - Jumlah: 100000 → disimpan ke jumlah
+     * 
+     * 2. DSKL (membutuhkan_keterangan_tambahan = true)
+     *    - Jenis Donasi: "DSKL"
+     *    - Keterangan: "Program Beasiswa" → disimpan ke keterangan_infak_khusus
+     *    - Catatan: "Untuk anak yatim" → disimpan ke catatan_donatur
+     *    - Jumlah: 500000 → disimpan ke jumlah
+     * 
+     * 3. DONASI UMUM (membutuhkan_keterangan_tambahan = false)
+     *    - Jenis Donasi: "Donasi Umum"
+     *    - Keterangan: "Untuk kegiatan sosial" → disimpan ke catatan_donatur
+     *    - Catatan: "Semoga bermanfaat" → digabung ke catatan_donatur
+     *    - Jumlah: 200000 → disimpan ke jumlah
+     *     * 4. DONASI BARANG (apakah_barang = true)
+     *    - Jenis Donasi: "Donasi Barang"
+     *    - Keterangan: "Untuk kebutuhan dapur" → disimpan ke catatan_donatur
+     *    - Deskripsi Barang: "Beras 5kg premium, Minyak 2L" → disimpan ke deskripsi_barang
+     *    - Perkiraan Nilai Barang: 70000 → disimpan ke perkiraan_nilai_barang
+     *    - Jumlah: 0 (tidak wajib untuk barang)
+     *     * 5. AUTO DETEKSI GENDER DARI NAMA:
+     *    a) PREFIX PASTI:
+     *       - "Bapak Ahmad" → nama: "Ahmad", gender: "male"
+     *       - "Ibu Siti" → nama: "Siti", gender: "female"
+     *    
+     *    b) PREFIX NETRAL + DETEKSI NAMA:
+     *       - "Ananda Siti Nurhaliza" → nama: "Siti Nurhaliza", gender: "female" (deteksi dari pola nama)
+     *       - "Ananda Ahmad Budi" → nama: "Ahmad Budi", gender: "male" (deteksi dari pola nama)
+     *       - "Dr. Sarah" → nama: "Sarah", gender: "female" (deteksi dari pola nama)
+     *      *    c) TANPA PREFIX:
+     *       - "Siti Aminah" → nama: "Siti Aminah", gender: "female" (deteksi dari pola nama)
+     *       - "Ahmad Sudirman" → nama: "Ahmad Sudirman", gender: "male" (deteksi dari pola nama)
+     *       - "John Smith" → nama: "John Smith", gender: "male" (default jika tidak cocok pola)
+     * 
+     * 6. FORMAT TANGGAL YANG DIDUKUNG:
+     *    - "1/3/2025", "01/03/2025" (Indonesia: dd/mm/yyyy)
+     *    - "1-3-2025", "01-03-2025" (Indonesia: dd-mm-yyyy)
+     *    - "1.3.2025", "01.03.2025" (Indonesia: dd.mm.yyyy)
+     *    - "2025-03-01" (MySQL: yyyy-mm-dd)
+     *    - "03/01/2025" (US: mm/dd/yyyy)
+     *    - "1/3/2025 10:30" (dengan waktu)
+     */
+    public static function getCompletedNotificationBody(Import $import): string
+    {
+        $body = 'Your donasi import has completed and ' . number_format($import->successful_rows) . ' ' . str('row')->plural($import->successful_rows) . ' imported.';
+
+        if ($failedRowsCount = $import->getFailedRowsCount()) {
+            $body .= ' ' . number_format($failedRowsCount) . ' ' . str('row')->plural($failedRowsCount) . ' failed to import.';
+        }
+
+        return $body;
+    }
+
+    /**
+     * Parse tanggal dari berbagai format Indonesia
+     */
+    private function parseTanggal($tanggalInput): ?string
+    {
+        if (!$tanggalInput) {
+            return null;
+        }
+        
+        // Jika sudah berupa Carbon/DateTime object
+        if ($tanggalInput instanceof \DateTime || $tanggalInput instanceof \Carbon\Carbon) {
+            return $tanggalInput->format('Y-m-d');
+        }
+        
+        $tanggalStr = trim((string) $tanggalInput);
+        
+        // Format yang didukung
+        $formats = [
+            // Format Indonesia umum
+            'd/m/Y',     // 1/3/2025, 01/03/2025
+            'd-m-Y',     // 1-3-2025, 01-03-2025  
+            'd.m.Y',     // 1.3.2025, 01.03.2025
+            
+            // Format dengan 0 di depan
+            'd/m/y',     // 1/3/25, 01/03/25
+            'd-m-y',     // 1-3-25, 01-03-25
+            'd.m.y',     // 1.3.25, 01.03.25
+            
+            // Format internasional
+            'Y-m-d',     // 2025-03-01 (MySQL format)
+            'Y/m/d',     // 2025/03/01
+            'm/d/Y',     // 03/01/2025 (US format)
+            'm-d-Y',     // 03-01-2025
+            
+            // Format dengan waktu
+            'd/m/Y H:i',   // 1/3/2025 10:30
+            'd-m-Y H:i',   // 1-3-2025 10:30
+            'Y-m-d H:i:s', // 2025-03-01 10:30:00
+        ];
+        
+        // Coba parse dengan setiap format
+        foreach ($formats as $format) {
+            try {
+                $date = \Carbon\Carbon::createFromFormat($format, $tanggalStr);
+                if ($date && $date->year >= 2000 && $date->year <= 2030) {
+                    return $date->format('Y-m-d');
+                }
+            } catch (\Exception $e) {
+                continue; // Coba format berikutnya
+            }
+        }
+        
+        // Coba parsing dengan strtotime sebagai fallback
+        try {
+            $timestamp = strtotime($tanggalStr);
+            if ($timestamp !== false) {
+                $date = \Carbon\Carbon::createFromTimestamp($timestamp);
+                if ($date->year >= 2000 && $date->year <= 2030) {
+                    return $date->format('Y-m-d');
+                }
+            }
+        } catch (\Exception $e) {
+            // Ignore
+        }
+        
+        // Jika semua gagal, return null
+        return null;
+    }
+    
+    /**
+     * Parse jumlah uang dari berbagai format Indonesia
+     */
+    private function parseJumlahUang($jumlahInput): float
+    {
+        if (!$jumlahInput) {
+            return 0;
+        }
+        
+        // Jika sudah berupa number
+        if (is_numeric($jumlahInput)) {
+            return (float) $jumlahInput;
+        }
+        
+        $jumlahStr = trim((string) $jumlahInput);
+        
+        // Remove common currency symbols and text
+        $cleaned = $jumlahStr;
+        $cleaned = str_ireplace(['rp', 'rupiah', 'idr', 'rp.', 'rp '], '', $cleaned);
+        
+        // Remove spaces
+        $cleaned = str_replace(' ', '', $cleaned);
+        
+        // Handle different decimal separators
+        // Format Indonesia: 100.000,50 (titik ribuan, koma desimal)
+        // Format International: 100,000.50 (koma ribuan, titik desimal)
+        
+        // Detect format based on last separator
+        $lastComma = strrpos($cleaned, ',');
+        $lastDot = strrpos($cleaned, '.');
+        
+        if ($lastComma !== false && $lastDot !== false) {
+            // Both comma and dot present
+            if ($lastComma > $lastDot) {
+                // Format Indonesia: 100.000,50
+                $cleaned = str_replace('.', '', $cleaned); // Remove thousand separators
+                $cleaned = str_replace(',', '.', $cleaned); // Convert decimal separator
+            } else {
+                // Format International: 100,000.50
+                $cleaned = str_replace(',', '', $cleaned); // Remove thousand separators
+                // Dot is already decimal separator
+            }
+        } elseif ($lastComma !== false) {
+            // Only comma present
+            // Could be either thousand separator (100,000) or decimal (100,50)
+            $commaCount = substr_count($cleaned, ',');
+            if ($commaCount === 1) {
+                // Check if it's decimal separator (has 1-2 digits after comma)
+                $afterComma = substr($cleaned, $lastComma + 1);
+                if (strlen($afterComma) <= 2 && is_numeric($afterComma)) {
+                    // Likely decimal separator
+                    $cleaned = str_replace(',', '.', $cleaned);
+                } else {
+                    // Likely thousand separator
+                    $cleaned = str_replace(',', '', $cleaned);
+                }
+            } else {
+                // Multiple commas, treat as thousand separators
+                $cleaned = str_replace(',', '', $cleaned);
+            }
+        } elseif ($lastDot !== false) {
+            // Only dot present
+            // Could be either thousand separator (100.000) or decimal (100.50)
+            $dotCount = substr_count($cleaned, '.');
+            if ($dotCount === 1) {
+                // Check if it's decimal separator (has 1-2 digits after dot)
+                $afterDot = substr($cleaned, $lastDot + 1);
+                if (strlen($afterDot) <= 2 && is_numeric($afterDot)) {
+                    // Likely decimal separator, keep as is
+                } else {
+                    // Likely thousand separator
+                    $cleaned = str_replace('.', '', $cleaned);
+                }
+            } else {
+                // Multiple dots, treat as thousand separators
+                $cleaned = str_replace('.', '', $cleaned);
+            }
+        }
+        
+        // Remove any remaining non-numeric characters except decimal point
+        $cleaned = preg_replace('/[^0-9.]/', '', $cleaned);
+        
+        // Convert to float
+        return is_numeric($cleaned) ? (float) $cleaned : 0;
+    }
+    
+    /**
+     * Resolve atau create metode pembayaran berdasarkan nama
+     */
+    private function resolveMetodePembayaran(string $namaMetode): ?int
+    {
+        // Normalisasi nama metode pembayaran
+        $namaMetodeClean = $this->normalizeMetodePembayaran($namaMetode);
+        
+        // Coba cari berdasarkan nama yang sama persis
+        $metodePembayaran = MetodePembayaran::where('nama', $namaMetodeClean)->first();
+        
+        if (!$metodePembayaran) {
+            // Coba cari berdasarkan nama yang mirip
+            $metodePembayaran = MetodePembayaran::where('nama', 'like', '%' . $namaMetodeClean . '%')->first();
+        }
+          if (!$metodePembayaran) {
+            // Jika tidak ditemukan, buat metode pembayaran baru
+            $metodePembayaran = MetodePembayaran::create([
+                'nama' => $namaMetodeClean,
+                'aktif' => true,
+                'instruksi_pembayaran' => 'Auto-created from import: ' . $namaMetode,
+            ]);
+        }
+        
+        return $metodePembayaran?->id;
+    }
+    
+    /**
+     * Normalisasi nama metode pembayaran untuk konsistensi
+     */
+    private function normalizeMetodePembayaran(string $namaMetode): string
+    {
+        $nama = trim($namaMetode);
+        
+        // Mapping untuk standardisasi nama metode pembayaran
+        $mappingMetode = [
+            // Transfer Bank
+            'tf bsi' => 'Transfer BSI',
+            'tf bca' => 'Transfer BCA', 
+            'tf mandiri' => 'Transfer Mandiri',
+            'tf bni' => 'Transfer BNI',
+            'tf bri' => 'Transfer BRI',
+            'tf btn' => 'Transfer BTN',
+            'tf muamalat' => 'Transfer Muamalat',
+            'tf syariah' => 'Transfer Bank Syariah',
+            
+            // E-wallet
+            'gopay' => 'GoPay',
+            'ovo' => 'OVO',
+            'dana' => 'DANA',
+            'shopeepay' => 'ShopeePay',
+            'linkaja' => 'LinkAja',
+            
+            // Cash
+            'tunai' => 'Tunai',
+            'cash' => 'Tunai',
+            'kas' => 'Tunai',
+            
+            // Lainnya
+            'qris' => 'QRIS',
+            'virtual account' => 'Virtual Account',
+            'va' => 'Virtual Account',
+        ];
+        
+        $namaLower = strtolower($nama);
+        
+        // Cek mapping yang spesifik
+        foreach ($mappingMetode as $pattern => $standardName) {
+            if (str_contains($namaLower, $pattern)) {
+                // Extract nomor rekening/kode jika ada
+                if (preg_match('/(\d{4,})/', $nama, $matches)) {
+                    return $standardName . ' ' . $matches[1];
+                }
+                return $standardName;
+            }
+        }
+        
+        // Jika tidak ada mapping, kapitalisasi saja
+        return $this->capitalizeName($nama);
+    }
+
+    /**
+     * Resolve atau create jenis donasi berdasarkan nama
+     */
+    private function resolveJenisDonasi(string $namaJenis): ?JenisDonasi
+    {
+        // Coba cari berdasarkan nama yang sama persis
+        $jenisDonasi = JenisDonasi::where('nama', $namaJenis)->first();
+        
+        if (!$jenisDonasi) {
+            // Coba cari berdasarkan nama yang mirip
+            $jenisDonasi = JenisDonasi::where('nama', 'like', '%' . $namaJenis . '%')->first();
+        }
+        
+        if (!$jenisDonasi) {
+            // Jika tidak ditemukan, buat jenis donasi baru dengan setting default
+            $jenisDonasi = JenisDonasi::create([
+                'nama' => $this->capitalizeName($namaJenis),
+                'aktif' => true,
+                'apakah_barang' => $this->isJenisDonasiBarang($namaJenis),
+                'membutuhkan_keterangan_tambahan' => $this->isJenisDonasiMembutuhkanKeterangan($namaJenis),
+                'mengandung_dana_non_halal' => false,
+                'keterangan_dana_non_halal' => null,
+                'sumber_dana_penyaluran_id' => null,
+            ]);
+        }
+        
+        return $jenisDonasi;
+    }
+    
+    /**
+     * Deteksi apakah jenis donasi adalah donasi barang
+     */
+    private function isJenisDonasiBarang(string $namaJenis): bool
+    {
+        $namaLower = strtolower($namaJenis);
+        $keywordBarang = [
+            'barang', 'sembako', 'makanan', 'minuman', 'pakaian', 
+            'alat', 'perlengkapan', 'furniture', 'elektronik',
+            'buku', 'tas', 'sepatu', 'mainan', 'obat-obatan'
+        ];
+        
+        foreach ($keywordBarang as $keyword) {
+            if (str_contains($namaLower, $keyword)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Deteksi apakah jenis donasi membutuhkan keterangan tambahan
+     */
+    private function isJenisDonasiMembutuhkanKeterangan(string $namaJenis): bool
+    {
+        $namaLower = strtolower($namaJenis);
+        $keywordKeterangan = [
+            'infaq terikat', 'infak terikat', 'dskl', 
+            'beasiswa', 'bantuan khusus', 'program',
+            'kegiatan', 'acara', 'event', 'terikat'
+        ];
+        
+        foreach ($keywordKeterangan as $keyword) {
+            if (str_contains($namaLower, $keyword)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+}

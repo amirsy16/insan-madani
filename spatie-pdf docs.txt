@@ -1,0 +1,488 @@
+Creating PDFs
+This package can be used to create PDFs from HTML. In a Laravel application the easiest way to generate some HTML is to use a Blade view.
+
+Here's an example where we are going to create a PDF from a Blade view.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('pdf.invoice')->save('/some/directory/invoice.pdf');
+As a second parameter you can pass an array of data that will be made available in the view. You might use that to pass an Eloquent model, such as an invoice, to the view.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->save('/some/directory/invoice.pdf');
+You can also create a PDF from a string of HTML.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::html('<h1>Hello world!!</h1>')->save('/some/directory/invoice.pdf');
+##Using Javascript
+The JavaScript in your HTML will be executed when the PDF is created. You could use this to have a JavaScript charting library render a chart.
+
+Here's a simple example. If you have this Blade view...
+
+<div id="target"></div>
+
+<script>
+    document.getElementById('target').innerHTML = 'hello';
+</script>
+... and render it with this code...
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('your-view')->save($pathToPdf);
+... the text hello will be visible in the PDF.
+
+Responding with PDFs
+In a controller, you can create and return a PDF by using the pdf() helper function.
+
+use function Spatie\LaravelPdf\Support\pdf;
+
+class DownloadInvoiceController
+{
+    public function __invoke(Invoice $invoice)
+    {
+        return pdf()
+            ->view('pdf.invoice', compact('invoice'))
+            ->name('invoice-2023-04-10.pdf');
+    }
+}
+By default, the PDF will be inlined in the browser. This means that the PDF will be displayed in the browser if the browser supports it. If the user tries to download the PDF, it will be named "invoice-2023-04-10.pdf". We recommend that you always name your PDFs.
+
+If you want to force the PDF to be downloaded, you can use the download() method.
+
+use function Spatie\LaravelPdf\Support\pdf;
+
+class DownloadInvoiceController
+{
+    public function __invoke(Invoice $invoice)
+    {
+        return pdf()
+            ->view('pdf.invoice', compact('invoice'))
+            ->name('invoice-2023-04-10.pdf')
+            ->download();
+    }
+}
+
+Formatting PDFs
+There are various options to customize the output of the PDFs. You can change the page size, the orientation, the margins, and much more!
+
+##Setting a header and footer
+You can set a header and footer on every page of the PDF. You can use the headerView and footerView methods to set the HTML for the header and footer.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->headerView('pdf.invoice.header')
+    ->footerView('pdf.invoice.footer')
+    ->save('/some/directory/invoice-april-2022.pdf');
+You can also use the headerHtml and footerHtml methods to set the HTML for the header and footer.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->headerHtml('<div>My header</div>')
+    ->footerHtml('<div>My footer</div>')
+    ->save('/some/directory/invoice-april-2022.pdf');
+The header and footer do not use the CSS set in the main view. In your header and footer HTML, you should add any CSS you need. Here's an example footer view:
+
+<style>
+footer {
+    font-size: 12px;
+}
+</style>
+
+<footer>
+  This is the footer
+</footer>
+Inside the footer, you can use the following Blade directives:
+
+@pageNumber: The current page number
+@totalPages: The total number of pages
+##Display Images in Headers and Footers
+You can add an image using the blade directive @inlinedImage
+
+It supports absolute and relative paths
+
+// using relative path
+@php $logo = public_path('assets/logo.png'); @endphp
+@inlinedImage($logo)
+
+// using absolute path
+@inlinedImage('https://some-url/assets/some-logo.png')
+##Page orientation
+By default, all PDFs are created in portrait mode. You can change this by calling the landscape method.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->landscape()
+    ->save('/some/directory/invoice-april-2022.pdf');
+Alternatively, you can use the Orientation method.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+use \Spatie\LaravelPdf\Enums\Orientation;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->orientation(Orientation::Landscape)
+    ->save('/some/directory/invoice-april-2022.pdf');
+##Paper format
+By default, all PDFs are created in Letter format. You can change this by calling the format method.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\Enums\Format;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->format(Format::A3) // or you can pass a string like 'a3'
+    ->save('/some/directory/invoice-april-2022.pdf');
+There are the available formats of the Format enum:
+
+Letter: 8.5in  x  11in
+Legal: 8.5in  x  14in
+Tabloid: 11in  x  17in
+Ledger: 17in  x  11in
+A0: 33.1in  x  46.8in
+A1: 23.4in  x  33.1in
+A2: 16.54in  x  23.4in
+A3: 11.7in  x  16.54in
+A4: 8.27in  x  11.7in
+A5: 5.83in  x  8.27in
+A6: 4.13in  x  5.83in
+##Paper size
+If you don't want to use standardized formats, you can also use the paperSize method instead.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('pdf.receipt', ['order' => $order])
+    ->paperSize(57, 500, 'mm')
+    ->save('/some/directory/receipt-12345.pdf');
+##Page margins
+Margins can be set using the margins method. The unit of the margins is millimeters by default.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->margins($top, $right, $bottom, $left)
+    ->save('/some/directory/invoice-april-2022.pdf');
+Optionally you can give a custom unit to the margins as the fifth parameter.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\Enums\Unit;
+
+Pdf::view('pdf.invoice', ['invoice' => $invoice])
+    ->margins($top, $right, $bottom, $left, Unit::Pixel)
+    ->save('/some/directory/invoice-april-2022.pdf');
+##Background color
+By default, the resulting PDF will not show the background of the html page.
+
+You can set a background using css :
+
+<style>
+    html {
+        -webkit-print-color-adjust: exact;
+    }
+</style>
+Alternatively you can set print-color-adjust as economy it would generate the pdf document in economy mode.
+
+Or you can set a transparent background using browsershot:
+
+Pdf::view('test')
+    ->withBrowsershot(function (Browsershot $browsershot) {
+        $browsershot->transparentBackground();
+    })
+    ->save($this->targetPath);
+
+Saving PDFs to disks
+Laravel has a nice filesystem abstraction that allows you to easily save files to any filesystem. It works by configuring a "disk" in config/filesystems.php and then using the Storage facade to interact with that disk.
+
+Laravel PDF can save PDFs to any disk you have configured in your application. To do so, just use the disk() and pass it the name of your configured disk.
+
+Here's an example of saving a PDF to the s3 disk.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('invoice')
+   ->disk('s3')
+   ->save('invoice-april-2022.pdf');
+
+Testing PDFs
+In your test, you can call the fake() method on the Pdf facade to fake the PDF generation. Because the PDF generation is faked, your tests will run much faster.
+
+// in your test
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+beforeEach(function () {
+    Pdf::fake();
+});
+##assertSaved
+You can use the assertSaved method to assert that a PDF was saved with specific properties. You should pass it a callable which will received an instance of Spatie\LaravelPdf\PdfBuilder. If the callable returns true, the assertion will pass.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
+
+Pdf::assertSaved(function (PdfBuilder $pdf) {
+    return $pdf->downloadName === 'invoice.pdf'
+        && str_contains($pdf->html, 'Your total for April is $10.00');
+});
+If you want to assert that a PDF was saved to a specific path, you accept the path as a second parameter of the callable.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
+
+Pdf::assertSaved(function (PdfBuilder $pdf, string $path) {
+    return $path === storage_path('invoices/invoice.pdf');
+});
+##assertRespondedWithPdf
+The assertRespondedWithPdf method can be used to assert that a PDF was generated and returned as a response.
+
+Imagine you have this route:
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Route::get('download-invoice', function () {
+    return pdf('pdf.invoice')->download('invoice-for-april-2022.pdf');
+});
+In your test for this route you can use the assertRespondedWithPdf to make sure that a PDF was generated and returned as a download. You can even make assertions on the content of the PDF.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\PdfBuilder;
+
+it('can download an invoice', function () {
+    $this
+        ->get('download-invoice')
+        ->assertOk();
+        
+    Pdf::assertRespondedWithPdf(function (PdfBuilder $pdf) {
+        return $pdf->downloadName === 'invoice-for-april-2022.pdf'
+            && $pdf->isDownload()
+            && str_contains($pdf->html, 'Your total for April is $10.00');
+    });
+});
+##Simple assertion methods
+Beside the methods listed above, there are a few simple assertion methods that can be used to assert that a PDF was generated. They are meant to test code that generated a single PDF. The assertions will pass if any of the generated PDFs match the assertion.
+
+If your code generates multiple PDFs, it's better to use the assertSaved method.
+
+##assertViewIs
+You can use the assertViewIs method to assert that a PDF was generated using a specific view.
+
+Pdf::assertViewIs('pdf.invoice');
+##assertSee
+You can use the assertSee method to assert that a PDF was generated that contains a given string.
+
+Pdf::assertSee('Your total for April is $10.00');
+You can pass an array of strings to assert that all of them are present in the PDF.
+
+Pdf::assertSee([
+    'Your total for April is $10.00', 
+    'Your total for May is $20.00',
+]);
+##assertViewHas
+You can use the assertViewHas method to assert that a PDF was generated that was passed a specific key in its view data.
+
+Pdf::assertViewHas('invoice');
+As a second parameter you can pass the expected value.
+
+Pdf::assertViewHas('invoice', $invoice);
+##assertSaved
+You can use the assertSaved method to assert that a PDF was saved to the specified path.
+
+Pdf::assertSaved(storage_path('invoices/invoice.pdf'));
+
+Setting defaults
+You can set the default options for every PDF, by using the default method on the Pdf facade.
+
+Typically, you would do this in the boot method of a service provider.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+use Spatie\LaravelPdf\Enums\Format;
+
+// in a service provider
+
+Pdf::default()
+    ->headerView('pdf.header')
+    ->format(Format::A3);
+With this code, every PDF generated in your app will have the pdf.header view as header and will be rendered in A3 format.
+
+Of course, you can still override these defaults when generating a PDF.
+
+// this PDF will use the defaults: it will be rendered in A3 format
+
+Pdf::html('<h1>Hello world</h1>')
+    ->save('my-a3-pdf.pdf')
+
+// here we override the default: this PDF will be rendered in A4 format
+
+Pdf::html('<h1>Hello world</h1>')
+   ->format(Format::A4)
+   ->save('my-a4-pdf.pdf')
+
+reating PDFs with multiple pages
+This package offers a couple of Blade directives to help you create PDFs with multiple pages.
+
+##Setting a page break
+To create a PDF with multiple pages, you can use the @pageBreak Blade directive in your view. Using this directive will result in a new page being created in the PDF document.
+
+So if you have a view like this...
+
+<div>
+    Page 1
+</div>
+
+@pageBreak
+
+<div>
+    Page 2
+</div>
+... and you render this view using ...
+
+Pdf::view('view-with-multiple-pages')->save($path);
+... the resulting PDF will have two pages, one with "Page 1" and one with "Page 2".
+
+##Adding page numbers
+To add page numbers to your PDF, you can use the @pageNumber and @totalPages Blade directive in your view.
+
+Imagine you have this footer view...
+
+<div>
+    This is page @pageNumber of @totalPages
+</div>
+... and you render this view using ...
+
+Pdf::view('view-with-multiple-pages')->footerView('footer-view')->save($path);
+... the resulting PDF will have a footer on each page, with the page number and the total number of pages.
+
+Customizing Browsershot
+Under the hood, Laravel PDF uses Browsershot to generate the PDFs. While Laravel PDF provides a simple interface to generate PDFs, you can still use Browsershot directly to customize the PDFs.
+
+You can customize the Browsershot instance by calling the withBrowsershot method. This method accepts a closure that receives the Browsershot instance as its only argument. You can use this instance to customize the PDFs.
+
+Here's an example of how you can call Browsershot's scale method.
+
+use Spatie\LaravelPdf\Facades\Pdf;
+
+Pdf::view('test')
+    ->withBrowsershot(function (Browsershot $browsershot) {
+        $browsershot->scale(0.5);
+    })
+    ->save($this->targetPath);
+
+Generating PDFs on AWS Lambda
+Generating PDFs locally can be resource intensive. If you're having to generate a lot of PDFs, or having troubles to install the necessary dependencies on your server, you may want to consider using AWS Lambda to generate your PDFs.
+
+In order to generate PDFs on AWS Lambda, you must install these two packages in your app.
+
+hammerstone/sidecar: this allows you to execute AWS Lambda functions from your Laravel application
+wnx/sidecar-browsershot: this package contains a version of Browsershot that can run on AWS Lambda via Sidecar
+With these two packages installed, you can generate PDFs on AWS Lambda like this:
+
+Pdf::view('pdf.invoice', $data)
+    ->onLambda()
+    ->save('invoice.pdf');
+If you want to create all PDFs in your app on Lambda, you can set it as a default like this:
+
+// typically, in a service provider
+
+Pdf::default()->onLambda();
+
+Using Tailwind
+You can use Tailwind to style your PDFs. This is a great way to create PDFs that look great. Let's create a beautiful PDF invoice using Tailwind.
+
+In your project, you need to save a Blade view with content like this. In this view, we use the CDN version of Tailwind (in your project you can use an asset built with Vite) and got an invoice layout from one of the many Tailwind template sites.
+
+<html lang="en">
+<head>
+    <title>Invoice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+
+<div class="px-2 py-8 max-w-xl mx-auto">
+    <div class="flex items-center justify-between mb-8">
+        <div class="flex items-center">
+            <div class="text-gray-700 font-semibold text-lg">Your Company Name</div>
+        </div>
+        <div class="text-gray-700">
+            <div class="font-bold text-xl mb-2 uppercase">Invoice</div>
+            <div class="text-sm">Date: 01/05/2023</div>
+            <div class="text-sm">Invoice #: {{ $invoiceNumber }}</div>
+        </div>
+    </div>
+    <div class="border-b-2 border-gray-300 pb-8 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Bill To:</h2>
+        <div class="text-gray-700 mb-2">{{ $customerName }}</div>
+        <div class="text-gray-700 mb-2">123 Main St.</div>
+        <div class="text-gray-700 mb-2">Anytown, USA 12345</div>
+        <div class="text-gray-700">johndoe@example.com</div>
+    </div>
+    <table class="w-full text-left mb-8">
+        <thead>
+        <tr>
+            <th class="text-gray-700 font-bold uppercase py-2">Description</th>
+            <th class="text-gray-700 font-bold uppercase py-2">Quantity</th>
+            <th class="text-gray-700 font-bold uppercase py-2">Price</th>
+            <th class="text-gray-700 font-bold uppercase py-2">Total</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td class="py-4 text-gray-700">Product 1</td>
+            <td class="py-4 text-gray-700">1</td>
+            <td class="py-4 text-gray-700">$100.00</td>
+            <td class="py-4 text-gray-700">$100.00</td>
+        </tr>
+        <tr>
+            <td class="py-4 text-gray-700">Product 2</td>
+            <td class="py-4 text-gray-700">2</td>
+            <td class="py-4 text-gray-700">$50.00</td>
+            <td class="py-4 text-gray-700">$100.00</td>
+        </tr>
+        <tr>
+            <td class="py-4 text-gray-700">Product 3</td>
+            <td class="py-4 text-gray-700">3</td>
+            <td class="py-4 text-gray-700">$75.00</td>
+            <td class="py-4 text-gray-700">$225.00</td>
+        </tr>
+        </tbody>
+    </table>
+    <div class="flex justify-end mb-8">
+        <div class="text-gray-700 mr-2">Subtotal:</div>
+        <div class="text-gray-700">$425.00</div>
+    </div>
+    <div class="text-right mb-8">
+        <div class="text-gray-700 mr-2">Tax:</div>
+        <div class="text-gray-700">$25.50</div>
+
+    </div>
+    <div class="flex justify-end mb-8">
+        <div class="text-gray-700 mr-2">Total:</div>
+        <div class="text-gray-700 font-bold text-xl">$450.50</div>
+    </div>
+    <div class="border-t-2 border-gray-300 pt-8 mb-8">
+        <div class="text-gray-700 mb-2">Payment is due within 30 days. Late payments are subject to fees.</div>
+        <div class="text-gray-700 mb-2">Please make checks payable to Your Company Name and mail to:</div>
+        <div class="text-gray-700">123 Main St., Anytown, USA 12345</div>
+    </div>
+</div>
+
+</body>
+</html>
+In your app, you can add a controller like this. The above view is saved in resources/views/pdf/invoice.
+
+namespace App\Http\Controllers;
+
+use function Spatie\LaravelPdf\Support\pdf;
+
+class DownloadInvoiceController
+{
+    public function __invoke()
+    {
+        return pdf('pdf.invoice', [
+            'invoiceNumber' => '1234',
+            'customerName' => 'Grumpy Cat',
+        ]);
+    }
+}
+When you hit that controller, a formatted PDF will be downloaded.
